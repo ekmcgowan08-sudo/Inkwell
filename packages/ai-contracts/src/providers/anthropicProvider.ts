@@ -1,4 +1,4 @@
-import type { LLMProvider } from "../contracts.js";
+import type { LLMProvider } from "../contracts.ts";
 
 /**
  * SERVER-ONLY. This provider takes a real Anthropic API key and must only ever

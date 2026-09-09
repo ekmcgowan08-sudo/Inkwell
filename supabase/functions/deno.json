@@ -1,0 +1,8 @@
+{
+  "importMap": "./import_map.json",
+  "nodeModulesDir": "none",
+  "compilerOptions": {
+    "lib": ["deno.window"],
+    "strict": true
+  }
+}

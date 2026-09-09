@@ -1,0 +1,135 @@
+# Inkwell — AI Architecture
+
+## Where the model gets called
+
+**Exactly one place**: `supabase/functions/ai-assistant/index.ts`, a Deno Edge Function. No client
+(`apps/web`, the future `apps/desktop`, the future `apps/mobile`) holds an Anthropic API key or calls
+`api.anthropic.com` directly. `packages/ai-contracts/src/providers/anthropicProvider.ts` implements the actual
+HTTP call and is deliberately **not** re-exported from the package's barrel (`index.ts`) — it can only be
+imported by its full path, and only Edge Function code does.
+
+The model id is read from `ANTHROPIC_MODEL` (`supabase/functions/.env`), falling back to
+`DEFAULT_ANTHROPIC_MODEL` in that same file. Neither the fallback nor anywhere else in this codebase hardcodes
+a specific historical Claude snapshot as the *only* option — verify the configured id against
+<https://docs.claude.com/en/docs/about-claude/models> before deploying, since model availability changes over
+time and this document can't stay current with that.
+
+## Request flow
+
+1. Client calls `supabase.functions.invoke("ai-assistant", { body: AssistantRequest })`. The Supabase JS SDK
+   attaches the signed-in user's access token as the `Authorization` header automatically.
+2. The function verifies that token (`userClient.auth.getUser()`) — no valid session, no response.
+3. It re-derives project ownership **by querying through a client authenticated as that user**
+   (`createUserClient`, `_shared/supabaseClients.ts`), not by trusting the `projectId` in the request body. RLS
+   makes a project you don't own behave exactly like a project that doesn't exist — the function can't
+   distinguish the two, which is the point (no existence-leak).
+4. It checks a monthly token allowance (`entitlements.ai_monthly_token_allowance` vs. summed `ai_usage` for the
+   current `YYYY-MM`) before doing anything that costs money.
+5. It builds a **bounded** context (`_shared/buildContext.ts`) — never the full manuscript. See "Context
+   budgeting" below.
+6. It builds the system prompt (`packages/ai-contracts/src/promptBuilder.ts`) — one shared function, so the
+   Edge Function and the web app's local-only mode produce the same style of prompt.
+7. It calls the provider (real Anthropic, or the deterministic test provider if `ANTHROPIC_API_KEY` is unset —
+   this fallback exists so a Supabase project without AI credentials configured still returns *something*
+   instead of a hard failure, clearly logged as a fallback).
+8. It parses bracketed citations out of the response (`parseCitations`), persists both the user's question and
+   the assistant's answer via the **service-role** client (bypassing RLS deliberately — this is the one path
+   allowed to write `ai_messages`, see `docs/DATA_MODEL.md` "server-only write paths"), updates `ai_usage`, and
+   returns the answer with citations, a context summary, and a groundedness label.
+
+## Context budgeting ("never send the whole manuscript")
+
+`ContextBundle` (`packages/ai-contracts/src/contracts.ts`) is deliberately narrow:
+
+| Field | Bound |
+|---|---|
+| `chapterSummaries` | up to 30 chapters, each just a title + summary (not full text) |
+| `retrievedChunks` | up to 12 scenes, most-recently-updated, each truncated to 800 characters |
+| `storyBibleDigest` | up to 40 entries, name + a short digest, not the full structured fields blob |
+| `approvedCanonFacts` | up to 30, author-approved only (`approved_by_author = true`) |
+| `openThreads` | up to 20 |
+| `recentTimelineEvents` | up to 20 |
+| `recentMessages` | last 6 turns of the current conversation, if any |
+
+**Known simplification, stated plainly**: `retrievedChunks` today is a recency-bounded sample, not yet ranked
+by relevance to the specific question via full-text search. `scenes.search_vector` and
+`story_bible_entries.search_vector` (generated `tsvector` columns with GIN indexes — see
+`supabase/migrations/0004` and `0005`) exist specifically so retrieval can be upgraded to
+`plainto_tsquery(question) @@ search_vector` ranking without a schema change. That upgrade is the concrete
+next step for scaling context quality on large manuscripts, and is not yet implemented.
+
+## Citations and groundedness
+
+The system prompt instructs the model to reference `[chapter:<id>]`, `[scene:<id>]`, `[story_bible_entry:<id>]`,
+`[timeline_event:<id>]`, or `[canon_fact:<id>]` — ids that are already present in the context it was given.
+`parseCitations` (`packages/ai-contracts/src/citations.ts`) extracts these with a regex and resolves each id
+back to a human label from the same context bundle, producing structured `Citation[]` the UI renders as
+clickable badges. This is cheap (no second model call), deterministic, and testable with the local test
+provider — but it depends on the model actually following the instruction; nothing forces it to.
+
+`groundedness` is currently a coarse binary signal (`inferGroundedness`): `"not_established"` if the context
+bundle was entirely empty (a brand-new project), `"mixed"` otherwise. It is **not** currently a per-claim
+analysis of the response text — a genuinely per-sentence established/inference/invented classification would
+need either a second model call or much more careful prompt-engineered structured output, and wasn't built in
+this pass. Don't read more precision into the badge than "the model had *something* to work with."
+
+## Usage, cost, and rate control
+
+- **Token allowance**: `entitlements.ai_monthly_token_allowance` (default 200,000/month on the free plan, set
+  by the `handle_new_user_entitlement` trigger) checked against summed `ai_usage.tokens_input +
+  tokens_output` for the current calendar month (UTC) before any provider call.
+- **Cost tracking**: `packages/ai-contracts/src/pricing.ts` has a small, dated, clearly-labeled-as-hypothesis
+  pricing table (`PRICING_CHECKED_AT`) used only to *estimate* spend in `ai_usage.estimated_cost_usd_micros` —
+  never treated as an authoritative bill. Verify against <https://www.anthropic.com/pricing> before relying on
+  it for anything financial; see `docs/COSTS.md`.
+- **Rate limiting is coarse, not a sliding window.** The monthly allowance is the real gate. There is
+  deliberately no per-minute/per-second request throttle in this pass — a burst of requests within one's
+  monthly allowance will all be served. A proper sliding-window limiter (e.g., a `rate_limit_events` table or
+  an external store like Upstash) is a documented follow-up, not something to claim as done.
+- **No provider call happens unless the user initiates one.** There is no background job, cron, or
+  auto-trigger anywhere in this codebase that calls the AI without a direct user action (asking a question, or
+  clicking "Run consistency scan" — which itself is a zero-cost local rule-based scan, not a model call; see
+  `docs/DECISIONS.md`).
+
+## Cross-project isolation (why this can be trusted, not just asserted)
+
+Every table the AI reads from or writes to (`ai_conversations`, `ai_messages`, `ai_findings`, `ai_usage`,
+`document_chunks`) carries both `project_id` and, where relevant, `user_id`, and RLS enforces both — proven by
+the automated suite in `tests/rls/run.ts` ("AI retrieval isolation: document_chunks for project A are
+invisible to user B", "AI conversations and messages for project A are invisible to user B"). The context
+builder additionally only ever queries through a client scoped to the caller's own JWT, so even a bug in this
+function's own code that forgot a `project_id` filter would still be blocked by the database, not just by
+careful application logic.
+
+## Local-only mode (no Supabase configured)
+
+`apps/web` detects a missing `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` and routes AI Assistant requests to
+`packages/ai-contracts`'s deterministic test provider directly in the browser (`apps/web/src/lib/aiClient.ts`
+→ `askAssistantLocal`), building the same `ContextBundle` shape from IndexedDB instead of Postgres
+(`apps/web/src/lib/aiLocalContext.ts`). This is how the AI Assistant, Findings, and citation UI were built and
+verified without spending any API credits or needing a deployed backend. It is clearly labeled in the UI
+("Running in local test mode...") and never calls a real model — the deterministic test provider is the same
+one used in automated tests.
+
+## AI Findings vs. the AI Assistant's consistency-check mode
+
+Two different mechanisms, both real:
+
+1. **Rule-based scanner** (`apps/web/src/lib/findingsScanner.ts`, run via the "Run consistency scan" button):
+   duplicate story-bible names, open story threads with no linked scene, same-day/different-location timeline
+   conflicts. Zero AI cost, deterministic, works with no backend at all.
+2. **AI Assistant's `consistency_check` (and related) modes**: a real model call that reasons over the prose
+   itself in ways the rules above structurally cannot (e.g., "this character's eye color contradicts chapter
+   4"). This is a conversation the author has to actively start — nothing yet automatically converts an AI
+   Assistant answer into a persisted `ai_findings` row in the background. That would require a scheduled job
+   (e.g., a `pg_cron`-triggered Edge Function invocation) and is a concrete, well-scoped next step, not
+   something silently missing without a plan.
+
+## Deterministic test provider
+
+`packages/ai-contracts/src/providers/testProvider.ts` implements `LLMProvider` with no network call: it
+recognizes `TEST_SCENARIO:<name>` markers in the prompt for a few canned responses (used by tests), and
+otherwise returns a short, honest, clearly-labeled ("[test-provider deterministic response]") acknowledgment of
+the context and question it received. Same input always produces the same output. This is what every
+automated test and the local-only mode run against — nothing about the AI Assistant's UI, citation rendering,
+findings workflow, or usage tracking required spending real API credits to build or verify.

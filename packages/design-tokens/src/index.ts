@@ -1,3 +1,3 @@
-export * from "./colors.js";
-export * from "./typography.js";
-export * from "./spacing.js";
+export * from "./colors.ts";
+export * from "./typography.ts";
+export * from "./spacing.ts";

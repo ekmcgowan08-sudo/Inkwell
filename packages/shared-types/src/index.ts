@@ -1,3 +1,3 @@
-export * from "./common.js";
-export * from "./entities.js";
-export * from "./text.js";
+export * from "./common.ts";
+export * from "./entities.ts";
+export * from "./text.ts";

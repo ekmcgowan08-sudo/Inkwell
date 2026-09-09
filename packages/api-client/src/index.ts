@@ -1,2 +1,2 @@
-export * from "./client.js";
-export type { Database } from "./database.types.js";
+export * from "./client.ts";
+export type { Database } from "./database.types.ts";

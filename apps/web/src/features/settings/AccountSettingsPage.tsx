@@ -5,6 +5,7 @@ import { AppShell, NavItem } from "../../components/layout/AppShell";
 import { useAuth } from "../../lib/auth";
 import { useTheme } from "../../lib/theme";
 import { db } from "../../lib/db";
+import { getSupabase } from "../../lib/supabase";
 import { buildProjectBackup, downloadJson } from "../../lib/exportProject";
 import { Button } from "../../components/ui/Button";
 import { SelectField } from "../../components/ui/FormControls";
@@ -34,9 +35,17 @@ export function AccountSettingsPage() {
     }
     // Cloud mode: account deletion must happen server-side (cascades through
     // every owned row via ON DELETE CASCADE, and removing an auth.users row
-    // requires the service role). This calls the not-yet-deployed
-    // `account-delete` Edge Function — see docs/OWNER_ACTIONS_REQUIRED.md.
-    show("Account deletion requires the account-delete Edge Function to be deployed. See docs/SECURITY.md.", "danger");
+    // requires the service role) — see supabase/functions/account-delete.
+    // That function must be deployed to the Supabase project for this to
+    // succeed; see docs/OWNER_ACTIONS_REQUIRED.md.
+    const supabase = getSupabase()!;
+    const { error } = await supabase.functions.invoke("account-delete", { body: {} });
+    if (error) {
+      show(`Couldn't delete your account: ${error.message}`, "danger");
+      return;
+    }
+    await supabase.auth.signOut();
+    window.location.href = "/login";
   }
 
   return (

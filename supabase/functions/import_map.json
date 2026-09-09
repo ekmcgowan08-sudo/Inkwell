@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "zod": "npm:zod@3.23.8",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.45.4",
+    "@inkwell/shared-types": "../../packages/shared-types/src/index.ts",
+    "@inkwell/ai-contracts": "../../packages/ai-contracts/src/index.ts",
+    "@inkwell/ai-contracts/providers/anthropicProvider": "../../packages/ai-contracts/src/providers/anthropicProvider.ts"
+  }
+}

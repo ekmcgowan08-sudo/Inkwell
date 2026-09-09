@@ -8,7 +8,7 @@
  * rationale.
  */
 import { z } from "zod";
-import { uuidSchema } from "./common.js";
+import { uuidSchema } from "./common.ts";
 
 const timestamp = z.string().datetime();
 const nullableText = z.string().nullable().default(null);

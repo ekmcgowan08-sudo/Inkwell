@@ -1,4 +1,4 @@
-import type { LLMProvider } from "../contracts.js";
+import type { LLMProvider } from "../contracts.ts";
 
 /**
  * Deterministic local AI provider. No network call, no API key, no cost.

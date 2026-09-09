@@ -1,4 +1,4 @@
-import type { ContextBundle } from "./contracts.js";
+import type { ContextBundle } from "./contracts.ts";
 import type { z } from "zod";
 import type { aiModeSchema } from "@inkwell/shared-types";
 

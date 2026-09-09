@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient, type SupportedStorage } from "@supabase/supabase-js";
-import type { Database } from "./database.types.js";
+import type { Database } from "./database.types.ts";
 
 export interface CreateInkwellClientOptions {
   url: string;

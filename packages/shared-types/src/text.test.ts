@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countWords, estimatePageCount, estimateReadingMinutes, extractPlainText } from "./text.js";
+import { countWords, estimatePageCount, estimateReadingMinutes, extractPlainText } from "./text.ts";
 
 describe("countWords", () => {
   it("returns 0 for empty or whitespace-only text", () => {
