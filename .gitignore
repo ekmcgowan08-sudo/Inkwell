@@ -1,0 +1,45 @@
+node_modules/
+dist/
+dist-ssr/
+build/
+.turbo/
+*.local
+.env
+.env.*
+!.env.example
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# Supabase
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# Mobile
+apps/mobile/.expo/
+apps/mobile/ios/
+apps/mobile/android/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editors / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Test / coverage
+coverage/
+playwright-report/
+test-results/
+
+# Never commit secrets or manuscript fixtures with real content
+*.pem
+*.key
+*.p12
+*.mobileprovision

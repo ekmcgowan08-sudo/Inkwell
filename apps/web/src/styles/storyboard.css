@@ -1,0 +1,55 @@
+.iw-board {
+  padding: 36px 48px;
+  overflow-x: auto;
+}
+.iw-board-columns {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.iw-board-column {
+  width: 280px;
+  flex-shrink: 0;
+}
+.iw-board-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.iw-board-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  position: relative;
+  border-left: 3px solid var(--color-accent);
+}
+.iw-board-card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+.iw-board-new-column {
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  width: 280px;
+  flex-shrink: 0;
+  padding: 12px;
+  color: var(--color-text-secondary);
+}
+.iw-overlay-banner {
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}

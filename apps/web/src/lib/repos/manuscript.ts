@@ -1,0 +1,215 @@
+import type { Chapter, Scene } from "@inkwell/shared-types";
+import { countWords, extractPlainText } from "@inkwell/shared-types";
+import { db, nowIso } from "../db";
+import { pushUpsert, pushDelete } from "../sync";
+
+export async function listChapters(projectId: string): Promise<Chapter[]> {
+  return db.chapters
+    .where("projectId")
+    .equals(projectId)
+    .and((c) => !c.deletedAt)
+    .sortBy("sortOrder");
+}
+
+export async function listScenes(chapterId: string): Promise<Scene[]> {
+  return db.scenes
+    .where("chapterId")
+    .equals(chapterId)
+    .and((s) => !s.deletedAt)
+    .sortBy("sortOrder");
+}
+
+export async function listAllScenes(projectId: string): Promise<Scene[]> {
+  return db.scenes.where("projectId").equals(projectId).and((s) => !s.deletedAt).toArray();
+}
+
+export async function createChapter(projectId: string, title: string): Promise<Chapter> {
+  const existing = await listChapters(projectId);
+  const now = nowIso();
+  const chapter: Chapter = {
+    id: crypto.randomUUID(),
+    projectId,
+    partId: null,
+    title,
+    sortOrder: existing.length,
+    status: "drafting",
+    summary: null,
+    revision: 0,
+    wordCount: 0,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+  await db.chapters.put(chapter);
+  await db.scenes.put({
+    id: crypto.randomUUID(),
+    projectId,
+    chapterId: chapter.id,
+    title: "Scene 1",
+    sortOrder: 0,
+    content: { type: "doc", content: [{ type: "paragraph", content: [] }] },
+    plainText: "",
+    wordCount: 0,
+    povCharacterId: null,
+    locationId: null,
+    inWorldTime: null,
+    storyThreadId: null,
+    status: "drafting",
+    revisionPriority: null,
+    colorLabel: null,
+    notes: null,
+    revision: 0,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  });
+  void pushUpsert("chapters", chapter.id, chapter as unknown as Record<string, unknown>);
+  return chapter;
+}
+
+export async function renameChapter(id: string, title: string): Promise<void> {
+  await db.chapters.update(id, { title, updatedAt: nowIso() });
+  const full = await db.chapters.get(id);
+  if (full) void pushUpsert("chapters", id, full as unknown as Record<string, unknown>);
+}
+
+export async function reorderChapters(projectId: string, orderedIds: string[]): Promise<void> {
+  await db.transaction("rw", db.chapters, async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.chapters.update(orderedIds[i]!, { sortOrder: i, updatedAt: nowIso() });
+    }
+  });
+  for (const id of orderedIds) {
+    const full = await db.chapters.get(id);
+    if (full) void pushUpsert("chapters", id, full as unknown as Record<string, unknown>);
+  }
+  void projectId;
+}
+
+export async function softDeleteChapter(id: string, projectId: string, userId: string): Promise<void> {
+  const chapter = await db.chapters.get(id);
+  if (!chapter) return;
+  await db.deletedItems.add({
+    id: crypto.randomUUID(),
+    projectId,
+    userId,
+    entityType: "chapter",
+    entityId: id,
+    snapshot: chapter as unknown as Record<string, unknown>,
+    deletedAt: nowIso(),
+    purgeAfter: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+  await db.chapters.update(id, { deletedAt: nowIso() });
+  void pushDelete("chapters", id);
+}
+
+export async function createScene(projectId: string, chapterId: string, title: string): Promise<Scene> {
+  const existing = await listScenes(chapterId);
+  const now = nowIso();
+  const scene: Scene = {
+    id: crypto.randomUUID(),
+    projectId,
+    chapterId,
+    title,
+    sortOrder: existing.length,
+    content: { type: "doc", content: [{ type: "paragraph", content: [] }] },
+    plainText: "",
+    wordCount: 0,
+    povCharacterId: null,
+    locationId: null,
+    inWorldTime: null,
+    storyThreadId: null,
+    status: "drafting",
+    revisionPriority: null,
+    colorLabel: null,
+    notes: null,
+    revision: 0,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+  await db.scenes.put(scene);
+  void pushUpsert("scenes", scene.id, scene as unknown as Record<string, unknown>);
+  return scene;
+}
+
+/**
+ * The autosave write path. Called by the editor's debounce timer, not on
+ * every keystroke. Bumps `revision` (used for optimistic-concurrency sync)
+ * and appends a document_revisions row so crash recovery / version history
+ * always has a prior state to fall back to. See docs/EDITOR_AND_AUTOSAVE.md.
+ */
+export async function autosaveScene(sceneId: string, content: unknown): Promise<{ wordCount: number }> {
+  const scene = await db.scenes.get(sceneId);
+  if (!scene) throw new Error("Scene not found");
+  const plainText = extractPlainText(content);
+  const wordCount = countWords(plainText);
+  const nextRevision = scene.revision + 1;
+  const now = nowIso();
+
+  await db.transaction("rw", db.scenes, db.documentRevisions, db.chapters, async () => {
+    await db.scenes.update(sceneId, { content, plainText, wordCount, revision: nextRevision, updatedAt: now });
+    await db.documentRevisions.put({
+      id: crypto.randomUUID(),
+      sceneId,
+      projectId: scene.projectId,
+      revision: nextRevision,
+      content,
+      plainText,
+      wordCount,
+      createdAt: now,
+      createdBy: "autosave",
+    });
+    await recomputeChapterWordCount(scene.chapterId);
+  });
+
+  const full = await db.scenes.get(sceneId);
+  if (full) void pushUpsert("scenes", sceneId, full as unknown as Record<string, unknown>);
+  return { wordCount };
+}
+
+async function recomputeChapterWordCount(chapterId: string): Promise<void> {
+  const scenes = await listScenes(chapterId);
+  const total = scenes.reduce((sum, s) => sum + s.wordCount, 0);
+  await db.chapters.update(chapterId, { wordCount: total, updatedAt: nowIso() });
+}
+
+export async function projectWordCount(projectId: string): Promise<number> {
+  const scenes = await listAllScenes(projectId);
+  return scenes.reduce((sum, s) => sum + s.wordCount, 0);
+}
+
+export async function listRevisions(sceneId: string) {
+  return db.documentRevisions.where("sceneId").equals(sceneId).reverse().sortBy("revision");
+}
+
+export async function restoreRevision(sceneId: string, revisionId: string): Promise<void> {
+  const revision = await db.documentRevisions.get(revisionId);
+  if (!revision) return;
+  const scene = await db.scenes.get(sceneId);
+  if (!scene) return;
+  const now = nowIso();
+  const nextRevision = scene.revision + 1;
+  await db.transaction("rw", db.scenes, db.documentRevisions, async () => {
+    await db.scenes.update(sceneId, {
+      content: revision.content,
+      plainText: revision.plainText,
+      wordCount: revision.wordCount,
+      revision: nextRevision,
+      updatedAt: now,
+    });
+    await db.documentRevisions.put({
+      id: crypto.randomUUID(),
+      sceneId,
+      projectId: scene.projectId,
+      revision: nextRevision,
+      content: revision.content,
+      plainText: revision.plainText,
+      wordCount: revision.wordCount,
+      createdAt: now,
+      createdBy: "restore",
+    });
+  });
+  const full = await db.scenes.get(sceneId);
+  if (full) void pushUpsert("scenes", sceneId, full as unknown as Record<string, unknown>);
+}
