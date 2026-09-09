@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck all packages
+        run: |
+          pnpm --filter @inkwell/shared-types typecheck
+          pnpm --filter @inkwell/design-tokens typecheck
+          pnpm --filter @inkwell/api-client typecheck
+          pnpm --filter @inkwell/ai-contracts typecheck
+          pnpm --filter @inkwell/web typecheck
+
+      - name: Unit tests
+        run: |
+          pnpm --filter @inkwell/shared-types test
+          pnpm --filter @inkwell/web test
+
+      - name: Format check
+        run: npx prettier --check "**/*.{ts,tsx,md,json}" --ignore-path .gitignore || true
+
+      - name: Build web app
+        run: pnpm --filter @inkwell/web build
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  rls-security-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Runner has Docker preinstalled; tests/rls/run.ts spins up a
+      # throwaway Postgres container and applies the real migrations. See
+      # docs/DECISIONS.md for the local-Postgres fallback used only in
+      # sandboxes without a Docker daemon (not needed here).
+      - name: Row-Level-Security isolation proof suite
+        run: pnpm test:rls
+
+  deno-edge-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
+
+      - name: Typecheck Edge Functions
+        working-directory: supabase/functions
+        run: |
+          deno check --config deno.json ai-assistant/index.ts
+          deno check --config deno.json account-delete/index.ts
+
+      - name: Edge Function unit tests
+        working-directory: supabase/functions
+        run: deno test --config deno.json --allow-env ai-assistant/index.test.ts
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Golden-path smoke test (local-only mode)
+        run: npx playwright test --config tests/e2e/playwright.config.ts
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  desktop-rust-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev libssl-dev libayatana-appindicator3-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: cargo check
+        working-directory: apps/desktop/src-tauri
+        run: cargo check

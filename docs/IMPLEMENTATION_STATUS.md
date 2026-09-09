@@ -1,6 +1,6 @@
 # Inkwell — Implementation Status
 
-Last updated: 2026-09-09, mid-session. This is the authoritative "what's actually true" doc — if it disagrees with a comment somewhere in code, this file wins. Update it before ending any work session on this repo.
+Last updated: 2026-09-09, end of session. This is the authoritative "what's actually true" doc — if it disagrees with a comment somewhere in code, this file wins. Update it before ending any work session on this repo.
 
 Legend: ✅ done and verified · 🟡 real but partial · ⚪ scaffolded/designed, not built · ❌ not started
 
@@ -70,21 +70,79 @@ Legend: ✅ done and verified · 🟡 real but partial · ⚪ scaffolded/designe
 ❌ Google Drive integration: not started (correctly sequenced after core sync — per the spec's own phase ordering — and requires **Prod creds**, a Google Cloud OAuth client, regardless).
 
 ## Phase 8/9 — Mobile & desktop
-See `docs/ARCHITECTURE.md` for the decision. Status as of this update: ⚪ **not yet scaffolded** — next up in this session. Desktop = Tauri 2 wrapping `apps/web`; Mobile = Expo. Neither can be fully verified in this container (no macOS/Windows signing, no Xcode/Android SDK) — see `docs/OWNER_ACTIONS_REQUIRED.md` once written.
+See `docs/ARCHITECTURE.md` for the decision (Tauri 2 desktop, Expo mobile).
+
+**Desktop (`apps/desktop`)**: ✅ Tauri 2 shell wrapping `apps/web` — native File/Edit/View/Window/Help menu
+(forwarded to the webview as DOM events, `apps/web/src/lib/desktopBridge.ts`), a real prevent-accidental-close
+guard, dialog/fs/os/shell/updater/process plugins with an explicit capabilities file. **Verified: Auto** —
+`cargo check` passes cleanly (zero warnings) against the real Tauri v2 + webkit2gtk toolchain installed in
+this environment. `tauri dev`/`tauri build` (needs a display server and, for installers, bundler tooling) were
+**not** run — compile-verified only, not run as an app.
+
+**Mobile (`apps/mobile`)**: 🟡 Real but deliberately v0-scoped. Expo Router app reusing
+`@inkwell/shared-types`/`design-tokens`/`api-client`: login, a Library tab with real RLS-protected Supabase
+queries, a plain-text (not rich-text) manuscript editor with debounced autosave, secure token storage
+(`expo-secure-store`, not AsyncStorage), AppState-aware token refresh. Story bible, storyboard, timeline, AI
+assistant, and an on-device local-first store are **not** built for mobile yet — mobile currently requires a
+configured Supabase backend (no local-only fallback the way web has). **Not verified at all** — no
+Expo/React Native toolchain, simulator, emulator, or device was available in this environment; written
+carefully by hand, never typechecked or run. Treat as unverified, full stop.
 
 ## Phase 10 — Media, subscriptions
-⚪ Not started. Schema (`media_assets`, `generation_jobs`, `entitlements`) exists and is RLS-protected; no UI, no provider interface code yet.
+⚪ Not started. Schema (`media_assets`, `generation_jobs`, `entitlements`) exists and is RLS-protected, with
+`entitlements` proven (in `tests/rls/run.ts`) to reject a client granting itself a paid plan — but no UI, no
+media-provider interface code, and no payment integration exist yet. Correctly out of scope for this pass per
+the brief's own phase ordering (media/subscriptions after core product).
 
 ## Phase 11 — Security, accessibility, performance, tests
-✅ RLS/security isolation tests (see Phase 2).
-🟡 Accessibility: semantic landmarks, labeled form fields, focus-visible styling, accessible dialogs (focus trap, Escape-to-close, restore focus), keyboard-operable storyboard reordering, non-color status indicators (icons + text, not color alone), reduced-motion support. **Not yet run through an automated accessibility checker** (axe or similar) — see `docs/TESTING.md`.
-❌ Formal unit/integration coverage is real but partial (shared-types text helpers, import detection, manuscript autosave/revision flow) — nowhere near exhaustive across every module listed in the brief's testing matrix (100k-word fixture, two-device conflict, expired session, etc.).
-⚪ CI workflow: not written yet as of this update.
+✅ RLS/security isolation tests (13/13, see Phase 2) — the load-bearing security evidence for this whole project.
+✅ Deno Edge Function typecheck + unit tests (`ai-assistant`, `account-delete`) — real, passing.
+✅ Full-stack CI workflow written (`.github/workflows/ci.yml`): typecheck/unit-tests/build/secret-scan, the RLS
+suite (Docker-based, as CI runners have a real daemon unlike this sandbox), Deno function typecheck+tests, the
+Playwright e2e suite, and a Rust `cargo check` job with the exact Tauri Linux dependencies this repo verified
+work. **Not run on an actual GitHub Actions runner** in this pass — YAML-validated and modeled directly on the
+commands verified locally, but CI executing it for real is the first genuine test of the workflow itself.
+🟡 Accessibility: semantic landmarks, labeled form fields, focus-visible styling, accessible dialogs (focus
+trap, Escape-to-close, restore focus), keyboard-operable storyboard reordering (a real alternative to
+drag-and-drop, not just a nod to the requirement), non-color status indicators, reduced-motion support.
+**Not yet run through an automated accessibility checker** (axe or similar) — a concrete, well-scoped CI
+addition, not done in this pass.
+❌ Formal unit/integration coverage is real but partial — nowhere near exhaustive across every module in the
+brief's testing matrix (100k-word fixture, two-device conflict, expired session, etc.). See `docs/TESTING.md`
+for the itemized "what was and wasn't run" list.
 
 ## Phase 12 — Release, store materials, cost model
-⚪ Not started as of this update (in progress this session — see the rest of `docs/` for what exists by the time you're reading this; this status file is updated as each doc lands).
+✅ `docs/DEPLOYMENT.md` (local dev through production deploy for web/desktop/mobile), `docs/STORE_SUBMISSION.md`
+(Apple/Google/Windows checklists), `docs/COSTS.md` (dated, sourced, explicitly-hypothesis cost estimates
+across local/beta/production/growth scenarios), `docs/OWNER_ACTIONS_REQUIRED.md` (the single consolidated
+non-delegable checklist), `docs/LEGAL_REVIEW_CHECKLIST.md` + eight legal drafts in `docs/legal/` (privacy
+policy, terms of service, AI data-use disclosure, copyright/ownership, subscription disclosure,
+account-deletion policy, data-retention policy, acceptable-use policy) — every draft explicitly labeled as
+requiring real legal review, none claims compliance with anything.
+⚪ App icons (`apps/desktop/src-tauri/icons/`, `apps/mobile/assets/`) are programmatically-generated
+placeholders (an ink-navy square with a gold mark) — real, valid PNG files so the build tooling has something
+to load, explicitly not final branding.
 
 ---
 
 ## The honest one-paragraph summary
-Inkwell today is a **real, working, local-first writing studio** — you can clone the repo, run one command, and get a fully functional app with manuscript editing, story bible, storyboard, timeline/goals, an AI assistant (test-mode), findings, and working exports, with zero configuration. The database schema and its security model are complete and proven by automated tests against a real Postgres instance. What's *not* yet true: no live Supabase project has ever actually run this schema in production, the real (non-test) Anthropic-backed AI path is written but unexercised, and desktop/mobile packaging had not started as of the top of this document (check the phases above for what landed by the end of the session).
+Inkwell today is a **real, working, local-first writing studio** for web and desktop — clone the repo, run one
+command, and get a fully functional app with manuscript editing (Tiptap, real debounced autosave and revision
+history), story bible, storyboard, timeline/goals, an AI assistant (14 modes, citations, test-mode by
+default), a real rule-based findings scanner, and working DOCX/TXT/Markdown/print/backup exports, with zero
+configuration. The desktop shell (Tauri 2) compiles cleanly against a real toolchain. The database schema and
+its security model are complete and proven by 13 automated isolation tests against a real Postgres instance,
+not just asserted. A full CI workflow, deployment/testing/security/privacy/cost documentation, and
+professional-review-pending legal drafts all exist. What's honestly *not* yet true: no live Supabase project
+has ever actually run this schema in production (Prod creds required to verify that), the real
+(non-test) Anthropic-backed AI path is written and Deno-typechecked/unit-tested but not exercised against a
+live model, sync is local-first-with-best-effort-push rather than true conflict-resolved multi-device sync,
+and mobile is a genuine but narrow v0 (login + library + plain-text editor) that could not be run or
+typechecked at all in this environment. Every one of those gaps is stated specifically, above, with a concrete
+next step — not glossed over.
+
+## Final verification pass (end of session)
+Re-run immediately before this update, all green: shared-types/design-tokens/api-client/ai-contracts/web
+typecheck, shared-types + web unit tests (17 tests), the RLS isolation suite (13/13, local-Postgres backend),
+the Deno Edge Function typecheck + unit tests (3/3), the full Playwright golden-path e2e test, the production
+web build, and `cargo check` on the desktop shell. Commands are listed in `docs/TESTING.md`.

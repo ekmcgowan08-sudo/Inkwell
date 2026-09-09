@@ -1,0 +1,55 @@
+# Inkwell — Roadmap
+
+Ordered roughly by leverage: highest-value, best-scoped next steps first. See `docs/IMPLEMENTATION_STATUS.md`
+for the full current-state detail behind each item.
+
+## Next up (well-scoped, no open design questions)
+
+1. **Revision-gated sync writes + conflict-resolution UI.** The `revision` column and detection mechanism
+   exist; `pushUpsert` needs to become a conditional update, and a real "pick a version" dialog needs to
+   exist for the case where it fails. See `docs/SYNC_AND_CONFLICTS.md`.
+2. **Full-text-search-ranked AI retrieval.** `search_vector` columns and GIN indexes already exist on
+   `scenes`/`story_bible_entries`; swap the context builder's recency-bounded sample for a
+   `plainto_tsquery`-ranked query. See `docs/AI_ARCHITECTURE.md`.
+3. **DOCX import** via `mammoth.js` feeding the existing `detectChapters` pipeline.
+4. **EPUB export** — zip/XHTML structure, `jszip`, reusing the same `plainText` extraction already used for
+   every other export format.
+5. **A real ≥100k-word fixture manuscript**, used to measure (not just architect for) editor and autosave
+   performance at scale.
+6. **Manuscript chapter drag-and-drop reordering** (storyboard already has this; the manuscript sidebar
+   doesn't yet).
+7. **Deploy a real Supabase project** and run every currently-code-reviewed-but-unexercised path (auth
+   flows, cloud sync, both Edge Functions) against it for the first time.
+
+## Medium-term
+
+- Series-level AI continuity scope (contract and schema exist; no UI toggle yet).
+- Automated conversion of AI Assistant consistency-check answers into persisted `ai_findings` (needs a
+  scheduled job).
+- Sliding-window AI rate limiting beyond the current monthly-allowance check.
+- Google Drive integration (backup/export/import to a connected Drive folder).
+- Media generation (character portraits, location concepts, cover concepts) — schema and architecture are
+  ready; needs a provider decision and UI.
+- Mobile: story bible, storyboard, timeline, and AI assistant screens (only Library + a plain-text manuscript
+  editor exist today); an on-device local-first store for offline mobile writing.
+- Subscription/entitlement UI and real payment integration (Stripe, Apple IAP, Google Play Billing) — schema
+  supports it, nothing is wired to a real payment processor.
+- Automated accessibility scanning (axe-core) in CI.
+- PWA manifest/service worker for installable-web-app support.
+
+## Longer-term / needs a product decision first, not just engineering
+
+- Real-time collaboration (multiple authors on one project) — no current requirement for this, not
+  architected either way.
+- Custom user-defined field *definitions* per project (the `custom_field_defs` table exists; freeform
+  notes/tags cover the "don't over-structure" need today, but true admin-defined structured fields are a
+  separate feature).
+- Automated dropped-plot-thread suggestions surfaced proactively (today, findings require the author to click
+  "Run consistency scan" or ask the AI Assistant directly — nothing runs unprompted, which is a deliberate
+  choice per the "no provider request without user initiation" requirement, but a lighter-weight local nudge
+  could be designed without violating that).
+
+## Explicitly not planned
+
+- End-to-end encryption is not on this roadmap as a near-term item — it's a significant architecture change
+  (client-side key management) that should follow a real product decision, not be assumed.
