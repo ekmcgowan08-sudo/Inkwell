@@ -43,3 +43,4 @@ test-results/
 *.key
 *.p12
 *.mobileprovision
+*.tsbuildinfo
