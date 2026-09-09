@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate } from "react-router-dom";
 import { Clock, Flame, Grid, List, Plus, Search, Star, Upload } from "lucide-react";
@@ -26,6 +26,20 @@ export function DashboardPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  // Native desktop menu items (File > New Book / Import) dispatch these
+  // events instead of driving app state from Rust — see
+  // apps/web/src/lib/desktopBridge.ts. No-ops in a plain browser.
+  useEffect(() => {
+    const openNew = () => setNewOpen(true);
+    const openImport = () => setImportOpen(true);
+    window.addEventListener("inkwell-open-new-book", openNew);
+    window.addEventListener("inkwell-open-import", openImport);
+    return () => {
+      window.removeEventListener("inkwell-open-new-book", openNew);
+      window.removeEventListener("inkwell-open-import", openImport);
+    };
+  }, []);
 
   const projects = useLiveQuery(async () => {
     if (!userId) return [];

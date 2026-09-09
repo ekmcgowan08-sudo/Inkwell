@@ -43,6 +43,18 @@ export function ManuscriptPage() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadingContent = useRef(false);
 
+  // Native desktop menu items (View > Toggle Focus Mode / Edit > Find &
+  // Replace) — no-ops in a plain browser. See lib/desktopBridge.ts.
+  useEffect(() => {
+    function onForwarded(e: Event) {
+      const action = (e as CustomEvent<string>).detail;
+      if (action === "focus_mode") setFocusMode((v) => !v);
+      else if (action === "find") setFindOpen(true);
+    }
+    window.addEventListener("inkwell-menu-action-forwarded", onForwarded);
+    return () => window.removeEventListener("inkwell-menu-action-forwarded", onForwarded);
+  }, []);
+
   const chapters = useLiveQuery(
     () => db.chapters.where("projectId").equals(project.id).and((c) => !c.deletedAt).sortBy("sortOrder"),
     [project.id],

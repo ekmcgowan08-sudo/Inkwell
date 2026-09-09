@@ -1,4 +1,8 @@
-/** Local models are camelCase (matches @inkwell/shared-types); Postgres columns are snake_case. */
+/**
+ * Local/mobile domain models are camelCase (this package); Postgres columns
+ * are snake_case. Shared by apps/web and apps/mobile so both convert the
+ * same way instead of maintaining two implementations.
+ */
 export function toSnakeRow(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {

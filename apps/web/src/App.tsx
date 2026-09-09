@@ -1,5 +1,8 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { useAuth } from "./lib/auth";
+import { registerCloseGuard, registerMenuBridge } from "./lib/desktopBridge";
+import { getSyncStatus } from "./lib/sync";
 import { Spinner } from "./components/ui/Feedback";
 import { LoginPage, SignupPage, ForgotPasswordPage, ResetPasswordPage } from "./features/auth/AuthPages";
 import { OnboardingPage } from "./features/auth/OnboardingPage";
@@ -29,7 +32,42 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
   return children;
 }
 
+function useDesktopIntegration() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const unlistenClose = registerCloseGuard(() => {
+      // Best-effort "is it safe to close" signal: a non-empty retry queue
+      // means a write hasn't reached the server yet.
+      return getSyncStatus() === "syncing" || getSyncStatus() === "error";
+    });
+    const unlistenMenu = registerMenuBridge();
+
+    function onMenuAction(e: Event) {
+      const action = (e as CustomEvent<string>).detail;
+      if (action === "new_book") {
+        navigate("/dashboard");
+        window.dispatchEvent(new CustomEvent("inkwell-open-new-book"));
+      } else if (action === "import") {
+        navigate("/dashboard");
+        window.dispatchEvent(new CustomEvent("inkwell-open-import"));
+      } else {
+        // focus_mode, find, command_palette: forwarded as-is for whichever
+        // page cares (ManuscriptPage listens for focus_mode/find today).
+        window.dispatchEvent(new CustomEvent("inkwell-menu-action-forwarded", { detail: action }));
+      }
+    }
+    window.addEventListener("inkwell-menu-action", onMenuAction);
+
+    return () => {
+      unlistenClose.then((fn) => fn());
+      unlistenMenu.then((fn) => fn());
+      window.removeEventListener("inkwell-menu-action", onMenuAction);
+    };
+  }, [navigate]);
+}
+
 export function App() {
+  useDesktopIntegration();
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

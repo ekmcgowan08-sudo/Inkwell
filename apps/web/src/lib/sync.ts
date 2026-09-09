@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { getSupabase } from "./supabase";
 import { isLocalOnlyMode } from "./env";
-import { toSnakeRow } from "./caseConvert";
+import { toSnakeRow } from "@inkwell/shared-types";
 
 export type SyncStatus = "synced" | "syncing" | "offline" | "error";
 
