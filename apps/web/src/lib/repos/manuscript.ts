@@ -68,7 +68,9 @@ export async function createChapter(projectId: string, title: string): Promise<C
 }
 
 export async function renameChapter(id: string, title: string): Promise<void> {
-  await db.chapters.update(id, { title, updatedAt: nowIso() });
+  const current = await db.chapters.get(id);
+  if (!current) return;
+  await db.chapters.update(id, { title, revision: current.revision + 1, updatedAt: nowIso() });
   const full = await db.chapters.get(id);
   if (full) void pushUpsert("chapters", id, full as unknown as Record<string, unknown>);
 }
@@ -76,7 +78,9 @@ export async function renameChapter(id: string, title: string): Promise<void> {
 export async function reorderChapters(projectId: string, orderedIds: string[]): Promise<void> {
   await db.transaction("rw", db.chapters, async () => {
     for (let i = 0; i < orderedIds.length; i++) {
-      await db.chapters.update(orderedIds[i]!, { sortOrder: i, updatedAt: nowIso() });
+      const current = await db.chapters.get(orderedIds[i]!);
+      if (!current) continue;
+      await db.chapters.update(orderedIds[i]!, { sortOrder: i, revision: current.revision + 1, updatedAt: nowIso() });
     }
   });
   for (const id of orderedIds) {

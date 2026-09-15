@@ -38,7 +38,7 @@ function useDesktopIntegration() {
     const unlistenClose = registerCloseGuard(() => {
       // Best-effort "is it safe to close" signal: a non-empty retry queue
       // means a write hasn't reached the server yet.
-      return getSyncStatus() === "syncing" || getSyncStatus() === "error";
+      return getSyncStatus() === "syncing" || getSyncStatus() === "error" || getSyncStatus() === "conflict";
     });
     const unlistenMenu = registerMenuBridge();
 

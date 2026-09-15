@@ -36,9 +36,9 @@ Legend: ✅ done and verified · 🟡 real but partial · ⚪ scaffolded/designe
 ✅ Tiptap-based rich text editor: bold/italic/underline/blockquote/scene-break(hr)/text-align, undo/redo, Find & Replace (find-next + replace-all, scoped to the open scene).
 ✅ Debounced autosave (1.5s idle) writing to IndexedDB first, bumping a per-scene `revision` counter and appending an append-only `document_revisions` row on every save — **not** a write per keystroke. **Verified: Auto** (`src/lib/repos/manuscript.test.ts`) and **Browser** (word count + "Saved" status confirmed live in Playwright).
 ✅ Version history UI: list revisions per scene, preview, restore (creates a *new* revision rather than rewriting history).
-🟡 Cloud sync: real code path exists (`src/lib/sync.ts` — best-effort push, retry queue in IndexedDB, online/offline listeners, periodic flush), using per-row optimistic concurrency via the `revision` column server-side. **Not verified against a live Supabase project** (no project deployed in this environment) — conflict-resolution *UI* (as opposed to the underlying revision mechanism) is not yet built; a losing concurrent write currently just gets queued and retried rather than surfaced to the author as a choice. See `docs/SYNC_AND_CONFLICTS.md` for the honest gap list.
+🟡 Cloud sync: real code path exists (`src/lib/sync.ts` — best-effort push, retry queue in IndexedDB, online/offline listeners, periodic flush), with per-row optimistic concurrency via the `revision` column now actually enforced: `pushUpsert` does a revision-gated conditional update, not a plain `upsert()`, and a losing write is recorded (never silently dropped) and surfaced to the author via `SyncStatusPill` → `SyncConflictsDialog` with a "keep mine / keep theirs" choice. **Verified: Auto** (`src/lib/sync.test.ts` exercises gating, conflict recording, and both resolution paths against a mocked Supabase client). **Not verified against a live Supabase project with two real devices** (no project deployed in this environment) — see `docs/SYNC_AND_CONFLICTS.md` for exactly what is and isn't proven.
 ✅ Focus mode, live word/page/reading-time estimates, chapter/scene add-rename-delete(soft), multi-scene-per-chapter model.
-❌ Drag-and-drop chapter *reordering* in the manuscript sidebar specifically (storyboard has full drag-and-drop; the manuscript chapter list does not yet) — a real gap, not a stub.
+✅ Drag-and-drop chapter reordering in the manuscript sidebar, mirroring the storyboard's dnd-kit pattern (pointer drag + keyboard-accessible up/down buttons). **Verified: Auto** (typecheck + `manuscript.test.ts`).
 🟡 Tested "at least 100,000 words" responsiveness requirement: not measured with an actual 100k-word fixture in this pass (see `docs/TESTING.md` for the concrete follow-up). Architecture (scene-level documents rather than one giant per-book document, plain-text caching rather than re-parsing) is designed for this, but the number itself is unverified.
 
 ## Phase 4 — Story bible, relationships, appearances, search
@@ -136,8 +136,9 @@ not just asserted. A full CI workflow, deployment/testing/security/privacy/cost 
 professional-review-pending legal drafts all exist. What's honestly *not* yet true: no live Supabase project
 has ever actually run this schema in production (Prod creds required to verify that), the real
 (non-test) Anthropic-backed AI path is written and Deno-typechecked/unit-tested but not exercised against a
-live model, sync is local-first-with-best-effort-push rather than true conflict-resolved multi-device sync,
-and mobile is a genuine but narrow v0 (login + library + plain-text editor) that could not be run or
+live model, sync is local-first-with-best-effort-push with revision-gated writes and a real conflict-resolution
+UI now in place but unproven against a live multi-device session (only mocked-network unit tests so far — see
+`docs/SYNC_AND_CONFLICTS.md`), and mobile is a genuine but narrow v0 (login + library + plain-text editor) that could not be run or
 typechecked at all in this environment. Every one of those gaps is stated specifically, above, with a concrete
 next step — not glossed over.
 

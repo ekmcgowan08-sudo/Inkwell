@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { db } from "../db";
 import { createProject } from "./projects";
-import { autosaveScene, listChapters, listScenes, listRevisions, restoreRevision } from "./manuscript";
+import { autosaveScene, createChapter, listChapters, listScenes, listRevisions, restoreRevision, renameChapter, reorderChapters } from "./manuscript";
 
 const USER_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -59,5 +59,19 @@ describe("manuscript repo (local-first autosave)", () => {
 
     const allRevisions = await listRevisions(scene!.id);
     expect(allRevisions).toHaveLength(3);
+  });
+
+  it("bumps chapter revision on rename and reorder, so sync can detect a stale write", async () => {
+    const project = await createProject(USER_ID, { title: "Test Book" });
+    const [chapter] = await listChapters(project.id);
+    expect(chapter!.revision).toBe(0);
+
+    await renameChapter(chapter!.id, "Renamed");
+    expect((await db.chapters.get(chapter!.id))!.revision).toBe(1);
+
+    const second = await createChapter(project.id, "Chapter 2");
+    await reorderChapters(project.id, [second.id, chapter!.id]);
+    expect((await db.chapters.get(chapter!.id))!.revision).toBe(2);
+    expect((await db.chapters.get(second.id))!.revision).toBe(1);
   });
 });

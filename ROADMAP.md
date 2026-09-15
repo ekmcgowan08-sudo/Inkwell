@@ -5,9 +5,12 @@ for the full current-state detail behind each item.
 
 ## Next up (well-scoped, no open design questions)
 
-1. **Revision-gated sync writes + conflict-resolution UI.** The `revision` column and detection mechanism
-   exist; `pushUpsert` needs to become a conditional update, and a real "pick a version" dialog needs to
-   exist for the case where it fails. See `docs/SYNC_AND_CONFLICTS.md`.
+1. ~~**Revision-gated sync writes + conflict-resolution UI.**~~ **Done.** `pushUpsert` now does a
+   revision-gated conditional update (falling back to plain insert for a row's first push or one that isn't
+   on the server yet), records a genuine conflict instead of silently overwriting, and
+   `SyncConflictsDialog` lets the author pick "keep mine" or "keep theirs". Unit-tested against a mocked
+   Supabase client (`apps/web/src/lib/sync.test.ts`); not yet exercised against a live two-device session.
+   See `docs/SYNC_AND_CONFLICTS.md`.
 2. **Full-text-search-ranked AI retrieval.** `search_vector` columns and GIN indexes already exist on
    `scenes`/`story_bible_entries`; swap the context builder's recency-bounded sample for a
    `plainto_tsquery`-ranked query. See `docs/AI_ARCHITECTURE.md`.
@@ -16,8 +19,8 @@ for the full current-state detail behind each item.
    every other export format.
 5. **A real ≥100k-word fixture manuscript**, used to measure (not just architect for) editor and autosave
    performance at scale.
-6. **Manuscript chapter drag-and-drop reordering** (storyboard already has this; the manuscript sidebar
-   doesn't yet).
+6. ~~**Manuscript chapter drag-and-drop reordering**~~ **Done.** Mirrors the storyboard's dnd-kit pattern
+   (pointer drag + keyboard-accessible up/down buttons), wired to the previously-unused `reorderChapters`.
 7. **Deploy a real Supabase project** and run every currently-code-reviewed-but-unexercised path (auth
    flows, cloud sync, both Edge Functions) against it for the first time.
 

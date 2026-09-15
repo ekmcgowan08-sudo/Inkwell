@@ -54,13 +54,30 @@ export function AIThinking({ label = "Reading the manuscript…" }: { label?: st
   );
 }
 
-export function SyncStatusPill({ status }: { status: "synced" | "syncing" | "offline" | "error" }) {
-  const label = { synced: "Saved", syncing: "Saving…", offline: "Offline — saved locally", error: "Sync error" }[status];
-  const dotClass = status === "offline" ? "offline" : status === "error" ? "error" : "";
+export function SyncStatusPill({
+  status,
+  onClick,
+}: {
+  status: "synced" | "syncing" | "offline" | "error" | "conflict";
+  onClick?: () => void;
+}) {
+  const label = {
+    synced: "Saved",
+    syncing: "Saving…",
+    offline: "Offline — saved locally",
+    error: "Sync error",
+    conflict: "Sync conflict — needs your input",
+  }[status];
+  const dotClass = status === "offline" ? "offline" : status === "error" || status === "conflict" ? "error" : "";
+  const Tag = onClick ? "button" : "span";
   return (
-    <span className="iw-status-pill">
+    <Tag
+      className="iw-status-pill"
+      onClick={onClick}
+      style={onClick ? { background: "none", border: "none", cursor: "pointer", padding: 0, font: "inherit" } : undefined}
+    >
       <span className={`iw-status-dot ${dotClass}`} aria-hidden="true" />
       {label}
-    </span>
+    </Tag>
   );
 }

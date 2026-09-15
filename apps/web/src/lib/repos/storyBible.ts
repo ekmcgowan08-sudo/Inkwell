@@ -39,7 +39,9 @@ export async function createEntry(
 }
 
 export async function updateEntry(id: string, patch: Partial<StoryBibleEntry>): Promise<void> {
-  await db.storyBibleEntries.update(id, { ...patch, updatedAt: nowIso() });
+  const current = await db.storyBibleEntries.get(id);
+  if (!current) return;
+  await db.storyBibleEntries.update(id, { ...patch, revision: current.revision + 1, updatedAt: nowIso() });
   const full = await db.storyBibleEntries.get(id);
   if (full) void pushUpsert("story_bible_entries", id, full as unknown as Record<string, unknown>);
 }

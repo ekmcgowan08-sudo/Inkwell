@@ -53,6 +53,20 @@ export interface DailyBaseline {
   baselineWordCount: number;
 }
 
+/**
+ * A push that lost the optimistic-concurrency check: another device's write reached
+ * Supabase first. Recorded so the author can pick a resolution rather than one write
+ * silently clobbering the other. See docs/SYNC_AND_CONFLICTS.md.
+ */
+export interface SyncConflict {
+  id: string; // `${table}:${recordId}`
+  table: string;
+  recordId: string;
+  localRow: Record<string, unknown>;
+  serverRow: Record<string, unknown>;
+  detectedAt: string;
+}
+
 class InkwellDB extends Dexie {
   localUser!: Table<LocalUser, string>;
   series!: Table<Series, string>;
@@ -76,6 +90,7 @@ class InkwellDB extends Dexie {
   aiFindings!: Table<AIFinding, string>;
   syncQueue!: Table<SyncQueueItem, string>;
   dailyBaselines!: Table<DailyBaseline, string>;
+  syncConflicts!: Table<SyncConflict, string>;
 
   constructor() {
     super("inkwell");
@@ -102,6 +117,7 @@ class InkwellDB extends Dexie {
       aiFindings: "id, projectId, status",
       syncQueue: "id, table, createdAt",
       dailyBaselines: "id, projectId, date",
+      syncConflicts: "id, table, recordId, detectedAt",
     });
   }
 }

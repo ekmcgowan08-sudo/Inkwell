@@ -105,7 +105,9 @@ export async function createSeries(userId: string, title: string): Promise<Serie
 
 export async function updateProject(id: string, patch: Partial<Project>): Promise<void> {
   const now = nowIso();
-  await db.projects.update(id, { ...patch, updatedAt: now, lastEditedAt: now });
+  const current = await db.projects.get(id);
+  if (!current) return;
+  await db.projects.update(id, { ...patch, revision: current.revision + 1, updatedAt: now, lastEditedAt: now });
   const full = await db.projects.get(id);
   if (full) void pushUpsert("projects", id, full as unknown as Record<string, unknown>);
 }

@@ -17,6 +17,7 @@ import { db } from "../../lib/db";
 import { projectWordCount } from "../../lib/repos/manuscript";
 import { AppShell, NavItem } from "../../components/layout/AppShell";
 import { SyncStatusPill } from "../../components/ui/Feedback";
+import { SyncConflictsDialog } from "../../components/sync/SyncConflictsDialog";
 import { onSyncStatusChange, type SyncStatus } from "../../lib/sync";
 import type { Project } from "@inkwell/shared-types";
 import { updateProject } from "../../lib/repos/projects";
@@ -39,6 +40,7 @@ export function ProjectLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("synced");
+  const [conflictsOpen, setConflictsOpen] = useState(false);
 
   const project = useLiveQuery(() => (projectId ? db.projects.get(projectId) : undefined), [projectId]);
   const wordCount = useLiveQuery(() => (projectId ? projectWordCount(projectId) : 0), [projectId]) ?? 0;
@@ -106,7 +108,7 @@ export function ProjectLayout() {
               <div>~{Math.max(1, Math.round(wordCount / 275))} pages</div>
               <div>{chapterCount} chapters</div>
               <div style={{ marginTop: 10 }}>
-                <SyncStatusPill status={syncStatus} />
+                <SyncStatusPill status={syncStatus} onClick={syncStatus === "conflict" ? () => setConflictsOpen(true) : undefined} />
               </div>
             </div>
           </>
@@ -114,6 +116,7 @@ export function ProjectLayout() {
       >
         <Outlet />
       </AppShell>
+      <SyncConflictsDialog open={conflictsOpen} onClose={() => setConflictsOpen(false)} />
     </ProjectContext.Provider>
   );
 }
