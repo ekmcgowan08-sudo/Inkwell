@@ -6,8 +6,12 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Maximize2, Minimize2, Plus, Trash2 } from "lucide-react";
+import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ArrowDown, ArrowUp, GripVertical, Maximize2, Minimize2, Plus, Trash2 } from "lucide-react";
 import { db } from "../../lib/db";
+import type { Chapter } from "@inkwell/shared-types";
 import { useAuth } from "../../lib/auth";
 import { useProjectContext } from "../project/ProjectLayout";
 import {
@@ -17,6 +21,7 @@ import {
   listScenes,
   projectWordCount,
   renameChapter,
+  reorderChapters,
   softDeleteChapter,
 } from "../../lib/repos/manuscript";
 import { recordWordsWrittenToday } from "../../lib/repos/storyboardTimeline";
@@ -29,6 +34,53 @@ import { FindReplaceDialog } from "./FindReplaceDialog";
 import "../../styles/manuscript.css";
 
 const AUTOSAVE_IDLE_MS = 1500;
+
+/** One draggable chapter row. Pointer drag (dnd-kit) and the up/down buttons are two paths to the same reorder — the buttons are the keyboard/screen-reader-accessible alternative, not an afterthought. */
+function SortableChapterRow({
+  chapter,
+  active,
+  index,
+  count,
+  onOpen,
+  onDelete,
+  onMove,
+}: {
+  chapter: Chapter;
+  active: boolean;
+  index: number;
+  count: number;
+  onOpen: () => void;
+  onDelete: () => void;
+  onMove: (direction: -1 | 1) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: chapter.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`iw-ms-chapter-item ${active ? "active" : ""}`}>
+      <button
+        {...attributes}
+        {...listeners}
+        aria-label={`Drag to reorder ${chapter.title}`}
+        style={{ background: "none", border: "none", color: "var(--color-text-secondary)", cursor: "grab", padding: 4, display: "flex" }}
+      >
+        <GripVertical size={13} />
+      </button>
+      <button className="title" onClick={onOpen}>
+        {chapter.title}
+      </button>
+      <IconButton label="Move up" onClick={() => onMove(-1)} disabled={index === 0}>
+        <ArrowUp size={12} />
+      </IconButton>
+      <IconButton label="Move down" onClick={() => onMove(1)} disabled={index === count - 1}>
+        <ArrowDown size={12} />
+      </IconButton>
+      <IconButton label={`Delete ${chapter.title}`} onClick={onDelete}>
+        <Trash2 size={13} />
+      </IconButton>
+    </div>
+  );
+}
 
 export function ManuscriptPage() {
   const { chapterId } = useParams();
@@ -122,6 +174,24 @@ export function ManuscriptPage() {
     setSaveState("saved");
   }, [editor, activeScene]);
 
+  async function moveChapterByKeyboard(chapter: Chapter, direction: -1 | 1) {
+    const index = chapters.findIndex((c) => c.id === chapter.id);
+    const targetIndex = index + direction;
+    if (index === -1 || targetIndex < 0 || targetIndex >= chapters.length) return;
+    const reordered = arrayMove(chapters, index, targetIndex);
+    await reorderChapters(project.id, reordered.map((c) => c.id));
+  }
+
+  async function onChapterDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = chapters.findIndex((c) => c.id === active.id);
+    const newIndex = chapters.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(chapters, oldIndex, newIndex);
+    await reorderChapters(project.id, reordered.map((c) => c.id));
+  }
+
   async function onAddChapter() {
     await flushNow();
     const chapter = await createChapter(project.id, `Chapter ${chapters.length + 1}`);
@@ -157,16 +227,22 @@ export function ManuscriptPage() {
         <div className="iw-help-text" style={{ marginBottom: 12, paddingLeft: 4, textTransform: "uppercase", letterSpacing: 1 }}>
           Chapters
         </div>
-        {chapters.map((c) => (
-          <div key={c.id} className={`iw-ms-chapter-item ${c.id === activeChapter?.id ? "active" : ""}`}>
-            <button className="title" onClick={async () => { await flushNow(); navigate(`/project/${project.id}/manuscript/${c.id}`); }}>
-              {c.title}
-            </button>
-            <IconButton label={`Delete ${c.title}`} onClick={() => setDeleteChapterId(c.id)}>
-              <Trash2 size={13} />
-            </IconButton>
-          </div>
-        ))}
+        <DndContext collisionDetection={closestCenter} onDragEnd={onChapterDragEnd}>
+          <SortableContext items={chapters.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            {chapters.map((c, i) => (
+              <SortableChapterRow
+                key={c.id}
+                chapter={c}
+                active={c.id === activeChapter?.id}
+                index={i}
+                count={chapters.length}
+                onOpen={async () => { await flushNow(); navigate(`/project/${project.id}/manuscript/${c.id}`); }}
+                onDelete={() => setDeleteChapterId(c.id)}
+                onMove={(direction) => moveChapterByKeyboard(c, direction)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
         <button
           onClick={onAddChapter}
           style={{
