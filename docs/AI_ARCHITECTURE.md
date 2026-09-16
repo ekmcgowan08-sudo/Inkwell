@@ -51,12 +51,19 @@ time and this document can't stay current with that.
 | `recentTimelineEvents` | up to 20 |
 | `recentMessages` | last 6 turns of the current conversation, if any |
 
-**Known simplification, stated plainly**: `retrievedChunks` today is a recency-bounded sample, not yet ranked
-by relevance to the specific question via full-text search. `scenes.search_vector` and
-`story_bible_entries.search_vector` (generated `tsvector` columns with GIN indexes — see
-`supabase/migrations/0004` and `0005`) exist specifically so retrieval can be upgraded to
-`plainto_tsquery(question) @@ search_vector` ranking without a schema change. That upgrade is the concrete
-next step for scaling context quality on large manuscripts, and is not yet implemented.
+**Retrieval is ranked, not just recency-bounded.** `retrievedChunks` (scenes) and `storyBibleDigest` (story
+bible entries) are ranked against the author's actual question via `ts_rank` over the generated
+`search_vector` columns (`supabase/migrations/0004`, `0005`), through two SQL functions —
+`search_scenes_ranked` / `search_story_bible_entries_ranked` (`supabase/migrations/0011_ranked_search.sql`,
+called from `supabase/functions/_shared/buildContext.ts`). Both are `LANGUAGE sql` with no `security
+definer`, so they run `SECURITY INVOKER` and row level security applies exactly as it would to a plain
+`select` from the caller's own session — proven in `tests/rls/run.ts` ("ranked full-text search functions...
+respect RLS"). When the question shares no keywords with anything written yet (a generic "how's it going?",
+or a brand-new project), the ranked query returns nothing and the context builder falls back to the original
+recency-bounded sample rather than handing the model an empty context bundle. **Verified: Auto** —
+`supabase/functions/_shared/buildContext.test.ts` (mocked Supabase client covering the ranked-match, no-match
+fallback, and empty-question cases) and the RLS suite; not yet exercised against a live Supabase project with
+real manuscript content.
 
 ## Citations and groundedness
 

@@ -60,10 +60,18 @@ on every save; it is never hand-edited and never the source of truth.
 ## Full-text search
 
 `scenes.search_vector` and `story_bible_entries.search_vector` are generated
-`tsvector` columns with GIN indexes — used for in-app project search. AI
-retrieval instead goes through `document_chunks`, a separate indexed table
-carrying `project_id` **and** `user_id` on every row (defense in depth: even
-if application code forgets one filter, RLS still enforces the other).
+`tsvector` columns with GIN indexes — used for in-app project search, and by
+the AI assistant's context builder, which ranks matches against the
+author's question with `ts_rank` via two `SECURITY INVOKER` SQL functions,
+`search_scenes_ranked` and `search_story_bible_entries_ranked`
+(`supabase/migrations/0011_ranked_search.sql`). Being `SECURITY INVOKER`
+(the default — neither function declares `security definer`), RLS on
+`scenes`/`story_bible_entries` applies to a call through these functions
+exactly as it would to a plain `select`; proven in `tests/rls/run.ts`. AI
+retrieval also separately goes through `document_chunks`, a distinct
+indexed table carrying `project_id` **and** `user_id` on every row (defense
+in depth: even if application code forgets one filter, RLS still enforces
+the other).
 
 ## Server-only write paths
 

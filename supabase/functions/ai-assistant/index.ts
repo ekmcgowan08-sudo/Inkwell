@@ -114,7 +114,7 @@ async function handleRequest(req: Request): Promise<Response> {
       resolvedConversationId = created.id;
     }
 
-    const ctx = await buildContextFromSupabase(userClient, projectId, project.title, conversationId);
+    const ctx = await buildContextFromSupabase(userClient, projectId, project.title, conversationId, question);
     const system = buildSystemPrompt(mode, ctx);
     const provider = selectProvider();
     const completion = await provider.complete({ system, user: question, maxTokens: 1024 });

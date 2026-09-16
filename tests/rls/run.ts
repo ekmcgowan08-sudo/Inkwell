@@ -259,6 +259,26 @@ async function main() {
       assert(asOther.rowCount === 0, "document chunks leaked across projects/users");
     });
 
+    await test("ranked full-text search functions (search_scenes_ranked, search_story_bible_entries_ranked) respect RLS", async () => {
+      // SECURITY INVOKER (the default) — these SQL functions must not let user B pull user A's
+      // content just by knowing project A's id. See supabase/migrations/0011_ranked_search.sql.
+      await asUser(client!, userA);
+      const scenesAsOwner = await client!.query(`select id from public.search_scenes_ranked('${projectAId}', 'ravens', 12)`);
+      assert(scenesAsOwner.rowCount === 1, "owning user should get the matching scene back from ranked search");
+      const entriesAsOwner = await client!.query(
+        `select id from public.search_story_bible_entries_ranked('${projectAId}', 'Isolde', 40)`,
+      );
+      assert(entriesAsOwner.rowCount === 1, "owning user should get the matching story bible entry back from ranked search");
+
+      await asUser(client!, userB);
+      const scenesAsOther = await client!.query(`select id from public.search_scenes_ranked('${projectAId}', 'ravens', 12)`);
+      assert(scenesAsOther.rowCount === 0, "ranked scene search leaked project A's content to user B");
+      const entriesAsOther = await client!.query(
+        `select id from public.search_story_bible_entries_ranked('${projectAId}', 'Isolde', 40)`,
+      );
+      assert(entriesAsOther.rowCount === 0, "ranked story bible search leaked project A's content to user B");
+    });
+
     await test("AI conversations and messages for project A are invisible to user B", async () => {
       await asUser(client!, userA);
       const convo = await client!.query(

@@ -11,9 +11,11 @@ for the full current-state detail behind each item.
    `SyncConflictsDialog` lets the author pick "keep mine" or "keep theirs". Unit-tested against a mocked
    Supabase client (`apps/web/src/lib/sync.test.ts`); not yet exercised against a live two-device session.
    See `docs/SYNC_AND_CONFLICTS.md`.
-2. **Full-text-search-ranked AI retrieval.** `search_vector` columns and GIN indexes already exist on
-   `scenes`/`story_bible_entries`; swap the context builder's recency-bounded sample for a
-   `plainto_tsquery`-ranked query. See `docs/AI_ARCHITECTURE.md`.
+2. ~~**Full-text-search-ranked AI retrieval.**~~ **Done.** `search_scenes_ranked` /
+   `search_story_bible_entries_ranked` (migration 0011, `SECURITY INVOKER`) rank matches with `ts_rank`
+   against the author's question, falling back to the old recency sample when nothing matches. Unit-tested
+   against a mocked Supabase client and proven RLS-safe in `tests/rls/run.ts`; not yet exercised against a
+   live project with real manuscript content. See `docs/AI_ARCHITECTURE.md`.
 3. **DOCX import** via `mammoth.js` feeding the existing `detectChapters` pipeline.
 4. **EPUB export** — zip/XHTML structure, `jszip`, reusing the same `plainText` extraction already used for
    every other export format.
