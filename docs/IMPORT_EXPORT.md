@@ -2,29 +2,38 @@
 
 ## Import (`apps/web/src/lib/importManuscript.ts`, `features/dashboard/ProjectDialogs.tsx`)
 
-**Supported today**: `.txt`, `.md`/`.markdown`.
+**Supported today**: `.txt`, `.md`/`.markdown`, `.docx`.
 
 1. Author picks a file (dashboard "Import" button, or onboarding).
-2. `detectChapters(text)` splits on lines matching `Chapter`/`Part`/`Prologue`/`Epilogue`/`Interlude` (case
-   insensitive) or a markdown heading (`#`/`##`/`###`). No match anywhere → the whole file becomes one
-   chapter, with an explicit warning, not a silent guess.
-3. **A real preview is always shown before anything is created**: detected chapter titles, word counts per
+2. For `.docx`, `extractTextFromDocx` (`mammoth.js`, client-side, nothing leaves the browser) first converts
+   the file to HTML, then `docxHtmlToHeadingAnnotatedText` maps Word's "Heading 1/2/3" paragraph styles
+   (mammoth's default style map turns those into `<h1>`/`<h2>`/`<h3>`) to the same `#`/`##`/`###` markdown
+   prefixes a `.md` file would use — one heading-detection path, not a separate one per format. `.txt`/`.md`
+   skip straight to step 3 with their raw text.
+3. `detectChapters(text)` splits on lines matching `Chapter`/`Part`/`Prologue`/`Epilogue`/`Interlude` (case
+   insensitive) or a markdown heading (`#`/`##`/`###`) — so a DOCX chapter is still detected by its heading
+   *text* even if it wasn't styled with a Word heading at all, same as a plain-text import. No match anywhere
+   → the whole file becomes one chapter, with an explicit warning, not a silent guess.
+4. **A real preview is always shown before anything is created**: detected chapter titles, word counts per
    chapter, and any warnings (no headings found, duplicate titles auto-numbered). The author confirms before
    a project is created.
-4. Import always creates a **new** project — never overwrites an existing one, silently or otherwise.
-5. Partial-failure handling: each chapter's scene is created and autosaved independently; if one fails, the
+5. Import always creates a **new** project — never overwrites an existing one, silently or otherwise.
+6. Partial-failure handling: each chapter's scene is created and autosaved independently; if one fails, the
    ones before it are already committed to IndexedDB (nothing is transactional across the whole import), so a
    partial import leaves a partially-populated project rather than losing everything. There's no dedicated
    "resume a failed import" flow yet — a concrete follow-up.
 
 Verified: `apps/web/src/lib/importManuscript.test.ts` (heading detection, empty-file handling, duplicate-title
-numbering) + browser-verified via the dashboard's import dialog.
+numbering) and `apps/web/src/lib/importDocx.test.ts` (Word heading styles → markdown headings, keyword-only
+fallback, Heading 2/3 mapping — against a mocked mammoth, since Vitest's Node-based SSR module resolution
+doesn't apply the package.json `"browser"` field mammoth needs for its `{ arrayBuffer }` input; the real
+`apps/web` client build does apply it, confirmed by inspecting the built bundle's `openZip` implementation)
++ browser-verified via the dashboard's import dialog for `.txt`/`.md`. DOCX import has not been manually
+tried against a real Word file with actual "Heading 1" styles in a browser in this pass.
 
-**Not implemented**: DOCX import, Inkwell-backup *import* (export exists, see below — round-tripping a backup
-back into a new project is not yet wired up), paste-as-multiple-chapters-with-review as a distinct flow (the
-file-upload flow already has the review step; a dedicated paste-text variant wasn't built separately).
-Concrete next step for DOCX: `mammoth.js` (actively maintained, converts `.docx` to HTML/plain text
-client-side) feeding into the same `detectChapters` pipeline already built.
+**Not implemented**: Inkwell-backup *import* (export exists, see below — round-tripping a backup back into a
+new project is not yet wired up), paste-as-multiple-chapters-with-review as a distinct flow (the file-upload
+flow already has the review step; a dedicated paste-text variant wasn't built separately).
 
 ## Export (`apps/web/src/lib/exportProject.ts`, `features/project/ExportsPage.tsx`)
 

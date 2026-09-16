@@ -5,7 +5,7 @@ import { TextField, SelectField } from "../../components/ui/FormControls";
 import { createProject, createSeries } from "../../lib/repos/projects";
 import { createChapter, listChapters, listScenes, autosaveScene } from "../../lib/repos/manuscript";
 import { db } from "../../lib/db";
-import { detectChapters, type ImportPreview } from "../../lib/importManuscript";
+import { detectChapters, extractTextFromDocx, type ImportPreview } from "../../lib/importManuscript";
 import type { Series } from "@inkwell/shared-types";
 import { useNavigate } from "react-router-dom";
 
@@ -83,12 +83,13 @@ export function ImportDialog({ open, onClose, userId }: { open: boolean; onClose
 
   async function onFileChosen(file: File) {
     setError(null);
-    setTitle(file.name.replace(/\.(txt|md|markdown)$/i, ""));
+    setTitle(file.name.replace(/\.(txt|md|markdown|docx)$/i, ""));
     try {
-      const text = await file.text();
+      const isDocx = /\.docx$/i.test(file.name);
+      const text = isDocx ? await extractTextFromDocx(file) : await file.text();
       setPreview(detectChapters(text));
     } catch {
-      setError("Couldn't read that file. Supported formats right now: .txt and .md — DOCX import is on the roadmap (see docs/IMPORT_EXPORT.md).");
+      setError("Couldn't read that file. Supported formats: .txt, .md, and .docx.");
     }
   }
 
@@ -136,13 +137,13 @@ export function ImportDialog({ open, onClose, userId }: { open: boolean; onClose
       {!preview && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <p className="iw-help-text">
-            Upload a .txt or .md file. We'll detect chapter headings automatically and show you a preview before
-            anything is created — nothing is imported silently.
+            Upload a .txt, .md, or .docx file. We'll detect chapter headings automatically (including Word's
+            "Heading" styles) and show you a preview before anything is created — nothing is imported silently.
           </p>
           <input
             ref={fileRef}
             type="file"
-            accept=".txt,.md,.markdown"
+            accept=".txt,.md,.markdown,.docx"
             onChange={(e) => e.target.files?.[0] && onFileChosen(e.target.files[0])}
           />
           {error && <p className="iw-field-error">{error}</p>}

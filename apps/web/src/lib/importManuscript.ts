@@ -1,9 +1,12 @@
+import mammoth from "mammoth";
+
 /**
  * Plain-text/Markdown manuscript import: detects chapter headings and splits
  * the source into a preview the author confirms before anything is created.
- * DOCX import is layered on top of this (see ImportDialog) by first
- * extracting text with mammoth, then running the same heading detection —
- * one code path, two source formats.
+ * DOCX import (`extractTextFromDocx` below) is layered on top of this — it
+ * turns a .docx into the same heading-annotated plain text a .md file would
+ * be, then `detectChapters` runs unchanged. One detection path, three
+ * source formats (.txt, .md, .docx).
  */
 export interface DetectedChapter {
   title: string;
@@ -75,4 +78,32 @@ export function detectChapters(rawText: string): ImportPreview {
   }
 
   return { chapters, warnings };
+}
+
+const HEADING_TAGS: Record<string, string> = { h1: "#", h2: "##", h3: "###", h4: "###" };
+
+/**
+ * Converts mammoth's HTML output into the same plain-text shape `detectChapters`
+ * already knows how to read: Word's "Heading 1/2/3" paragraph styles become
+ * markdown-style `#`/`##`/`###` prefixes (mammoth maps those styles to `<h1>`-`<h4>`
+ * by default), so a chapter titled with a real Word heading style is detected even if
+ * its text alone wouldn't match the "chapter/part/prologue…" keyword patterns.
+ */
+function docxHtmlToHeadingAnnotatedText(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const lines: string[] = [];
+  for (const el of Array.from(doc.body.children)) {
+    const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const prefix = HEADING_TAGS[el.tagName.toLowerCase()];
+    lines.push(prefix ? `${prefix} ${text}` : text, "");
+  }
+  return lines.join("\n");
+}
+
+/** Extracts a .docx file's content into text `detectChapters` can parse. Never sent anywhere — this runs entirely client-side. */
+export async function extractTextFromDocx(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
+  return docxHtmlToHeadingAnnotatedText(html);
 }

@@ -64,9 +64,9 @@ Legend: ✅ done and verified · 🟡 real but partial · ⚪ scaffolded/designe
 🟡 "Flexible rest days" field exists on `goals.rest_days`; the streak calculator does not yet treat a rest day as streak-preserving (it currently just breaks on any non-goal-met day) — described as a feature in the Book Settings copy slightly ahead of what the streak math actually does. **Action item**, tracked here rather than silently shipped as if finished.
 
 ## Phase 7 — Import, export, backups, Drive
-✅ Import: TXT/Markdown with real heading-detection, preview, warnings (duplicate titles, no-headings-found), confirm step — never a silent overwrite (always creates a new project). **Verified: Auto** (`importManuscript.test.ts`) **+ Browser.**
+✅ Import: TXT/Markdown/DOCX with real heading-detection, preview, warnings (duplicate titles, no-headings-found), confirm step — never a silent overwrite (always creates a new project). DOCX goes through `mammoth.js` client-side, mapping Word's Heading 1/2/3 styles into the same markdown-heading detection path TXT/MD already use. **Verified: Auto** (`importManuscript.test.ts`, `importDocx.test.ts` — the latter against a mocked mammoth, since Vitest's SSR module resolution doesn't apply mammoth's `"browser"` package.json field the way the real client build does; confirmed separately by inspecting the built bundle) **+ Browser** for TXT/MD only — DOCX has not been manually tried against a real Word file in a browser in this pass.
 ✅ Export: DOCX (real, via the `docx` library — title page, heading styles, scene breaks, indentation), TXT, Markdown, complete Inkwell JSON backup — all real generated files via browser download, none are fake buttons. Print-ready PDF via a dedicated print stylesheet + `window.print()`.
-❌ DOCX *import* and EPUB *export* are not implemented (see `docs/IMPORT_EXPORT.md` for the concrete plan — mammoth.js for DOCX-in, a hand-built zip/XML EPUB writer for EPUB-out).
+❌ EPUB *export* is not implemented (see `docs/IMPORT_EXPORT.md` for the concrete plan — a hand-built zip/XML EPUB writer, reusing the same `jszip` dependency `mammoth`/`docx` already pull in).
 ❌ Google Drive integration: not started (correctly sequenced after core sync — per the spec's own phase ordering — and requires **Prod creds**, a Google Cloud OAuth client, regardless).
 
 ## Phase 8/9 — Mobile & desktop

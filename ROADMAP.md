@@ -16,7 +16,11 @@ for the full current-state detail behind each item.
    against the author's question, falling back to the old recency sample when nothing matches. Unit-tested
    against a mocked Supabase client and proven RLS-safe in `tests/rls/run.ts`; not yet exercised against a
    live project with real manuscript content. See `docs/AI_ARCHITECTURE.md`.
-3. **DOCX import** via `mammoth.js` feeding the existing `detectChapters` pipeline.
+3. ~~**DOCX import**~~ **Done.** `mammoth.js` converts to HTML client-side; Word's Heading 1/2/3 styles map
+   to `#`/`##`/`###` and feed the existing `detectChapters` pipeline unchanged, so a DOCX chapter is caught
+   by either its Word heading style or its heading text. Unit-tested against a mocked mammoth (see
+   `docs/IMPORT_EXPORT.md` for exactly why real docx parsing isn't re-verified in the test); not yet manually
+   tried against a real Word file in a browser.
 4. **EPUB export** — zip/XHTML structure, `jszip`, reusing the same `plainText` extraction already used for
    every other export format.
 5. **A real ≥100k-word fixture manuscript**, used to measure (not just architect for) editor and autosave
