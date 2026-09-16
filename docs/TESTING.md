@@ -6,22 +6,19 @@
 |---|---|---|---|
 | Shared-types unit tests | `pnpm --filter @inkwell/shared-types test` | Word/page/reading-time math, plain-text extraction from rich-text docs | ✅ Auto, passing |
 | Web unit tests | `pnpm --filter @inkwell/web test` | Import chapter-detection, autosave/revision-history flow (via `fake-indexeddb`) | ✅ Auto, passing |
-| RLS isolation suite | `pnpm test:rls` | 13 assertions proving cross-user/cross-project isolation against a real Postgres instance running the real migrations | ✅ Auto, passing (both Docker and local-Postgres backends — see `docs/DECISIONS.md`) |
+| RLS isolation suite | `pnpm test:rls` | 14 assertions proving cross-user/cross-project isolation against a real Postgres instance running the real migrations | ✅ Auto, passing (both Docker and local-Postgres backends — see `docs/DECISIONS.md`) |
 | Edge Function tests | `deno test --config supabase/functions/deno.json --allow-env supabase/functions/ai-assistant/index.test.ts` | Provider fallback logic, period-month formatting | ✅ Auto, passing |
 | Edge Function typecheck | `deno check --config supabase/functions/deno.json supabase/functions/ai-assistant/index.ts` (and `account-delete`) | Both functions typecheck against the real npm dependency graph Deno would actually run | ✅ Auto, passing |
 | Playwright e2e | `npx playwright test --config tests/e2e/playwright.config.ts` | The full golden path in a real Chromium browser: create book → write → autosave → story bible → storyboard → timeline/goals → AI assistant → findings scan → exports → back to dashboard | ✅ Browser, passing |
+| Playwright performance (100k-word fixture) | `npx playwright test --config tests/e2e/playwright.config.ts tests/e2e/performance.spec.ts` | Generates a deterministic 40-chapter/~100,203-word manuscript, imports it through the real import UI, and measures import/chapter-switch/typing+autosave latency in a real Chromium browser — see below for actual numbers | ✅ Browser, passing |
 | Desktop Rust compile | `cd apps/desktop/src-tauri && cargo check` | The Tauri 2 shell (menu, plugins, close guard) compiles cleanly against the real toolchain | ✅ Auto, passing, zero warnings |
 
 ## What was NOT run, and why (be specific, don't hand-wave)
 
-- **A ≥100,000-word fixture manuscript.** Never created or loaded. The architecture (per-scene documents,
-  cached plain-text/word-count columns, no whole-book re-serialization) is designed for this scale — see
-  `docs/EDITOR_AND_AUTOSAVE.md` — but "designed for" is not the same claim as "measured at." Concrete next
-  step: generate a realistic fixture (e.g., 40 chapters × 2,500 words) and profile editor input latency and
-  autosave duration against it.
-- **Two-device conflicting edits.** Requires the revision-gated conditional update this pass didn't implement
-  — see `docs/SYNC_AND_CONFLICTS.md`. There's currently nothing to observe beyond "last write wins," so a test
-  for it would be testing the wrong thing.
+- **Two-device conflicting edits against a live Supabase project.** The revision-gated conditional update and
+  the conflict-resolution UI are both implemented and unit-tested against a mocked Supabase client (see
+  `docs/SYNC_AND_CONFLICTS.md`), but two *real* devices racing against a live project has not been observed —
+  this sandbox cannot reach a live Supabase project at all.
 - **Live Anthropic API calls.** No API key was available in this environment. Every AI code path was exercised
   against the deterministic test provider instead — real for citation parsing, groundedness labeling, context
   budgeting, usage-tracking logic, findings persistence; **not** real for actual model reasoning quality. The
@@ -47,10 +44,34 @@
 ## Test data used
 
 `tests/rls/run.ts` seeds two synthetic users and one project ("Court of Nine Ravens") per run, and tears
-everything down after. The Playwright e2e test creates one project via the real UI and does not seed fixture
-data outside what a real user action produces. The onboarding "sample project" (`apps/web/src/lib/sampleProject.ts`)
-reuses the original prototype's "The Lighthouse Keeps" content — real, but not a stress-test fixture (2
-chapters, 2 characters, 3 timeline events).
+everything down after. The golden-path Playwright e2e test creates one project via the real UI and does not
+seed fixture data outside what a real user action produces. The onboarding "sample project"
+(`apps/web/src/lib/sampleProject.ts`) reuses the original prototype's "The Lighthouse Keeps" content — real,
+but not a stress-test fixture (2 chapters, 2 characters, 3 timeline events).
+
+## 100k-word manuscript performance (measured, not just architected for)
+
+`tests/e2e/fixtures/generateManuscriptFixture.ts` generates a deterministic manuscript (a seeded PRNG over a
+small fantasy word bank, not lorem ipsum) — default 40 chapters × 2,500 words. `tests/e2e/performance.spec.ts`
+writes it to a `.md` file, imports it through the **real import UI** (not a direct database seed), and times
+each step in a real Chromium browser via Playwright. Most recent run, this environment (numbers will vary by
+machine; the point is the *shape*, not the exact figures — nothing here scales with book size):
+
+| Step | Measured |
+|---|---|
+| Chapter detection on a 100,203-word file (`detectChapters`) | ~65–95ms |
+| Creating 40 chapters + autosaving each scene (the actual import write path) | ~1.4–1.6s |
+| Switching to the 40th (last) chapter in the sidebar | ~95–110ms |
+| Typing a sentence + autosave settling to "Saved" | ~2.9–3.0s (expected: ~1.5s debounce + save + React re-render) |
+
+This is real evidence for the architecture claim in `docs/EDITOR_AND_AUTOSAVE.md` (scene-level documents,
+cached word-count columns, no whole-book re-serialization): chapter-switch and typing/autosave latency are
+scene-scoped, not book-scoped — switching to chapter 40 of 40 isn't measurably slower than chapter 1 would be,
+and autosave settle time matches the fixed 1.5s debounce rather than growing with total manuscript size. What
+this does **not** cover: this sandbox's CPU/IO characteristics aren't representative of a real user's device,
+and IndexedDB performance under a real browser profile (vs. Playwright's fresh profile per run) with years of
+accumulated data across many projects is untested. Run it yourself with `npx playwright test --config
+tests/e2e/playwright.config.ts tests/e2e/performance.spec.ts`.
 
 ## Running everything locally
 

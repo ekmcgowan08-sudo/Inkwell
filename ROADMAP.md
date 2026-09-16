@@ -25,8 +25,11 @@ for the full current-state detail behind each item.
    `jszip`, reusing the same `plainText` extraction every other export format uses. Unit-tested and validated
    against the real official `epubcheck` 5.1.0 — 0 errors/warnings on a generated file. Not yet opened in an
    actual e-reader app.
-5. **A real ≥100k-word fixture manuscript**, used to measure (not just architect for) editor and autosave
-   performance at scale.
+5. ~~**A real ≥100k-word fixture manuscript**~~ **Done.** `tests/e2e/fixtures/generateManuscriptFixture.ts`
+   generates a deterministic 40-chapter/~100,203-word manuscript; `tests/e2e/performance.spec.ts` imports it
+   through the real UI in a real Chromium browser and measures import/chapter-switch/typing+autosave latency.
+   Passing, with real numbers in `docs/TESTING.md` — chapter-switch and autosave settle time stay flat
+   regardless of book size, as the architecture intended.
 6. ~~**Manuscript chapter drag-and-drop reordering**~~ **Done.** Mirrors the storyboard's dnd-kit pattern
    (pointer drag + keyboard-accessible up/down buttons), wired to the previously-unused `reorderChapters`.
 7. **Deploy a real Supabase project** and run every currently-code-reviewed-but-unexercised path (auth

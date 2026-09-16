@@ -59,9 +59,11 @@ and its own debounce/save cycle, so editing chapter 40 of a 100k-word book never
 Plain-text extraction and word counts are cached (`plainText`, `wordCount` columns), never recomputed by
 re-parsing the whole document tree on the hot path.
 
-**Not yet measured**: this pass did not build and edit inside an actual ≥100,000-word fixture manuscript to
-confirm real-world responsiveness. The design is sound for the reasons above, but "designed for it" and
-"measured against it" are different claims — see `docs/TESTING.md` for the concrete follow-up.
+**Measured**: `tests/e2e/performance.spec.ts` builds a real 40-chapter/~100,203-word fixture, imports it
+through the actual import UI in a real Chromium browser, and times chapter-switching and typing/autosave —
+both stay flat regardless of total book size (switching to chapter 40 of 40 costs about the same as chapter
+1; autosave settle time tracks the fixed debounce, not manuscript length). See `docs/TESTING.md` for the
+actual numbers and what this measurement does and doesn't cover.
 
 ## Focus mode
 

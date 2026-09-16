@@ -39,7 +39,7 @@ Legend: ✅ done and verified · 🟡 real but partial · ⚪ scaffolded/designe
 🟡 Cloud sync: real code path exists (`src/lib/sync.ts` — best-effort push, retry queue in IndexedDB, online/offline listeners, periodic flush), with per-row optimistic concurrency via the `revision` column now actually enforced: `pushUpsert` does a revision-gated conditional update, not a plain `upsert()`, and a losing write is recorded (never silently dropped) and surfaced to the author via `SyncStatusPill` → `SyncConflictsDialog` with a "keep mine / keep theirs" choice. **Verified: Auto** (`src/lib/sync.test.ts` exercises gating, conflict recording, and both resolution paths against a mocked Supabase client). **Not verified against a live Supabase project with two real devices** (no project deployed in this environment) — see `docs/SYNC_AND_CONFLICTS.md` for exactly what is and isn't proven.
 ✅ Focus mode, live word/page/reading-time estimates, chapter/scene add-rename-delete(soft), multi-scene-per-chapter model.
 ✅ Drag-and-drop chapter reordering in the manuscript sidebar, mirroring the storyboard's dnd-kit pattern (pointer drag + keyboard-accessible up/down buttons). **Verified: Auto** (typecheck + `manuscript.test.ts`).
-🟡 Tested "at least 100,000 words" responsiveness requirement: not measured with an actual 100k-word fixture in this pass (see `docs/TESTING.md` for the concrete follow-up). Architecture (scene-level documents rather than one giant per-book document, plain-text caching rather than re-parsing) is designed for this, but the number itself is unverified.
+✅ Tested "at least 100,000 words" responsiveness requirement: `tests/e2e/performance.spec.ts` generates a deterministic 40-chapter/~100,203-word fixture, imports it through the real UI, and measures import/chapter-switch/typing+autosave latency in a real Chromium browser. **Verified: Browser** — see `docs/TESTING.md` for the actual numbers. Scene-level documents and cached plain-text/word-count columns hold up in practice, not just in architecture description.
 
 ## Phase 4 — Story bible, relationships, appearances, search
 ✅ Characters (full structured field set from the spec), locations/lore/objects/organizations/custom (summary + notes + tags — intentionally less rigidly structured, per "don't over-structure" guidance), canon status, tags, search/filter.
@@ -108,8 +108,8 @@ drag-and-drop, not just a nod to the requirement), non-color status indicators, 
 **Not yet run through an automated accessibility checker** (axe or similar) — a concrete, well-scoped CI
 addition, not done in this pass.
 ❌ Formal unit/integration coverage is real but partial — nowhere near exhaustive across every module in the
-brief's testing matrix (100k-word fixture, two-device conflict, expired session, etc.). See `docs/TESTING.md`
-for the itemized "what was and wasn't run" list.
+brief's testing matrix (two-device conflict against a live project, expired session, etc.). See
+`docs/TESTING.md` for the itemized "what was and wasn't run" list.
 
 ## Phase 12 — Release, store materials, cost model
 ✅ `docs/DEPLOYMENT.md` (local dev through production deploy for web/desktop/mobile), `docs/STORE_SUBMISSION.md`
