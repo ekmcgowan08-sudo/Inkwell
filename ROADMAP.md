@@ -21,8 +21,10 @@ for the full current-state detail behind each item.
    by either its Word heading style or its heading text. Unit-tested against a mocked mammoth (see
    `docs/IMPORT_EXPORT.md` for exactly why real docx parsing isn't re-verified in the test); not yet manually
    tried against a real Word file in a browser.
-4. **EPUB export** — zip/XHTML structure, `jszip`, reusing the same `plainText` extraction already used for
-   every other export format.
+4. ~~**EPUB export**~~ **Done.** Hand-built EPUB 3 (OCF container, OPF manifest/spine, nav document) via
+   `jszip`, reusing the same `plainText` extraction every other export format uses. Unit-tested and validated
+   against the real official `epubcheck` 5.1.0 — 0 errors/warnings on a generated file. Not yet opened in an
+   actual e-reader app.
 5. **A real ≥100k-word fixture manuscript**, used to measure (not just architect for) editor and autosave
    performance at scale.
 6. ~~**Manuscript chapter drag-and-drop reordering**~~ **Done.** Mirrors the storyboard's dnd-kit pattern

@@ -1,4 +1,5 @@
 import { Document, Packer, Paragraph, HeadingLevel, PageBreak, AlignmentType } from "docx";
+import JSZip from "jszip";
 import { db } from "./db";
 import { listChapters, listScenes } from "./repos/manuscript";
 import type { Project } from "@inkwell/shared-types";
@@ -133,4 +134,135 @@ export async function exportDocx(project: Project, options: DocxOptions = {}): P
 
   const doc = new Document({ sections: [{ children }] });
   return Packer.toBlob(doc);
+}
+
+export interface EpubOptions {
+  authorName?: string;
+}
+
+function escapeXml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+function sceneToXhtmlParagraphs(plainText: string): string {
+  return plainText
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p>${escapeXml(p)}</p>`)
+    .join("\n");
+}
+
+/**
+ * Builds the EPUB 3 archive contents as a JSZip instance (not yet serialized to a Blob), so
+ * apps/web/src/lib/exportProject.test.ts can inspect individual entries directly via
+ * `zip.file(path).async("string")` instead of round-tripping through a real Blob — jsdom's Blob
+ * polyfill doesn't implement `.arrayBuffer()`, so that round trip isn't available in tests.
+ * `exportEpub` below is the real entry point apps use; this is exported because the archive
+ * layout (manifest/spine/nav) is exactly what's worth testing on its own.
+ */
+export async function buildEpubZip(project: Project, options: EpubOptions = {}): Promise<JSZip> {
+  const chapters = await manuscriptChapters(project.id);
+  const zip = new JSZip();
+
+  // Must be the first entry in the archive and stored uncompressed — the one hard requirement
+  // of the EPUB/OCF container format that a plain "it's a zip file" wouldn't tell you to do.
+  zip.file("mimetype", "application/epub+zip", { compression: "STORE" });
+
+  zip.file(
+    "META-INF/container.xml",
+    `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`,
+  );
+
+  zip.file(
+    "OEBPS/style.css",
+    `body { font-family: serif; line-height: 1.5; margin: 1em; }
+h1 { text-align: center; margin-bottom: 1.5em; }
+p { text-indent: 1.5em; margin: 0 0 0.5em 0; }
+p + p { margin-top: 0; }`,
+  );
+
+  const chapterFiles = chapters.map((c, i) => ({
+    id: `chapter-${i + 1}`,
+    filename: `chapter-${i + 1}.xhtml`,
+    title: c.title,
+    body: c.scenes
+      .map((s) => sceneToXhtmlParagraphs(s.plainText))
+      .filter(Boolean)
+      .join('\n<p style="text-align: center;">* * *</p>\n'),
+  }));
+
+  for (const c of chapterFiles) {
+    zip.file(
+      `OEBPS/${c.filename}`,
+      `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>${escapeXml(c.title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>
+<body>
+<h1>${escapeXml(c.title)}</h1>
+${c.body}
+</body>
+</html>`,
+    );
+  }
+
+  const identifier = `urn:uuid:${project.id}`;
+  const modified = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+  const manifestItems = [
+    `<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>`,
+    `<item id="css" href="style.css" media-type="text/css"/>`,
+    ...chapterFiles.map((c) => `<item id="${c.id}" href="${c.filename}" media-type="application/xhtml+xml"/>`),
+  ].join("\n    ");
+  const spineItems = chapterFiles.map((c) => `<itemref idref="${c.id}"/>`).join("\n    ");
+
+  zip.file(
+    "OEBPS/content.opf",
+    `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="pub-id">${identifier}</dc:identifier>
+    <dc:title>${escapeXml(project.title)}</dc:title>
+    <dc:language>en</dc:language>
+    ${options.authorName ? `<dc:creator>${escapeXml(options.authorName)}</dc:creator>` : ""}
+    <meta property="dcterms:modified">${modified}</meta>
+  </metadata>
+  <manifest>
+    ${manifestItems}
+  </manifest>
+  <spine>
+    ${spineItems}
+  </spine>
+</package>`,
+  );
+
+  const navItems = chapterFiles.map((c) => `<li><a href="${c.filename}">${escapeXml(c.title)}</a></li>`).join("\n      ");
+  zip.file(
+    "OEBPS/nav.xhtml",
+    `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head><title>Contents</title></head>
+<body>
+  <nav epub:type="toc" id="toc">
+    <h1>Contents</h1>
+    <ol>
+      ${navItems}
+    </ol>
+  </nav>
+</body>
+</html>`,
+  );
+
+  return zip;
+}
+
+export async function exportEpub(project: Project, options: EpubOptions = {}): Promise<Blob> {
+  const zip = await buildEpubZip(project, options);
+  return zip.generateAsync({ type: "blob", mimeType: "application/epub+zip" });
 }

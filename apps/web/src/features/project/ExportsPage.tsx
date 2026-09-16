@@ -4,7 +4,7 @@ import { Download, Printer } from "lucide-react";
 import { useProjectContext } from "./ProjectLayout";
 import { db } from "../../lib/db";
 import { listChapters, listScenes } from "../../lib/repos/manuscript";
-import { buildProjectBackup, downloadBlob, downloadJson, downloadText, exportDocx, exportMarkdown, exportPlainText } from "../../lib/exportProject";
+import { buildProjectBackup, downloadBlob, downloadJson, downloadText, exportDocx, exportEpub, exportMarkdown, exportPlainText } from "../../lib/exportProject";
 import { Button } from "../../components/ui/Button";
 import { TextField, SelectField } from "../../components/ui/FormControls";
 import "../../styles/manuscript.css";
@@ -106,6 +106,17 @@ export function ExportsPage() {
           }
         />
         <ExportRow
+          title="EPUB (.epub)"
+          description="A real EPUB 3 package — title, chapters, and a navigable table of contents — for e-readers and apps like Apple Books."
+          busy={busy === "epub"}
+          onClick={() =>
+            withBusy("epub", async () => {
+              const blob = await exportEpub(project, { authorName });
+              downloadBlob(`${slug}.epub`, blob);
+            })
+          }
+        />
+        <ExportRow
           title="Print-ready PDF"
           description="Opens your browser's print dialog with a print-formatted layout — choose 'Save as PDF'."
           icon={<Printer size={16} />}
@@ -124,10 +135,6 @@ export function ExportsPage() {
         />
       </div>
 
-      <p className="iw-help-text" style={{ marginTop: 24, maxWidth: 520 }}>
-        EPUB export is not yet implemented — see docs/IMPORT_EXPORT.md for the plan. Everything above produces a real,
-        immediately-downloadable file from your current manuscript content.
-      </p>
 
       {printing && (
         <div className="iw-print-area" aria-hidden={!printing}>

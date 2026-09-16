@@ -31,6 +31,7 @@
     "dexie": "^4.0.9",
     "dexie-react-hooks": "^1.1.7",
     "docx": "^9.0.2",
+    "jszip": "^3.10.2",
     "lucide-react": "^0.454.0",
     "mammoth": "^1.12.3",
     "react": "^18.3.1",

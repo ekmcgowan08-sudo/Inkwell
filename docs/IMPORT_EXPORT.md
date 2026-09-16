@@ -47,13 +47,21 @@ placeholder buttons.
 | Markdown | `#`/`##` headings, `---` scene breaks | ✅ Real |
 | Print-ready PDF | Dedicated print stylesheet (`.iw-print-area`, `manuscript.css`) + `window.print()` — author chooses "Save as PDF" in their browser's print dialog | ✅ Real, but requires a manual browser step rather than producing a `.pdf` file directly |
 | Complete Inkwell project backup | Full JSON — project, chapters, scenes, story bible, relationships, storyboard, threads, timeline, goals (`buildProjectBackup`) | ✅ Real |
-| EPUB | — | ❌ Not implemented |
+| EPUB | `jszip` — hand-built OCF container (`mimetype`, `META-INF/container.xml`), an OPF package document (manifest + spine, EPUB 3), an XHTML nav document, and one XHTML file per chapter from the same `plainText` already used for every other export format | ✅ Real |
 
-**EPUB — concrete plan**: EPUB is a zip file containing XHTML + an OPF manifest + an NCX/nav table of
-contents. No existing dependency was pulled in for this (a from-scratch implementation is a well-defined but
-non-trivial chunk of work: `jszip` for the archive, hand-built XHTML per chapter from the same `plainText`
-extraction already used elsewhere, a manifest listing every part). This is the concrete next export format to
-build, not an open-ended unknown.
+**EPUB structure** (`buildEpubZip`/`exportEpub`, `apps/web/src/lib/exportProject.ts`): `mimetype` is written
+first and stored uncompressed — the one hard requirement of the EPUB/OCF container format a plain "it's a zip
+file" wouldn't tell you to get right. Title/author/chapter text are XML-escaped before being inlined into the
+generated markup (a book titled with a `&` or a straight quote must not produce malformed XML). No NCX file
+(the EPUB 2 legacy TOC format) is generated — only the EPUB 3 `nav.xhtml`, which is what every EPUB 3 reading
+system is required to support; broad EPUB 2 reader compatibility wasn't a stated requirement. **Verified:
+Auto** (`apps/web/src/lib/exportProject.test.ts` — inspects the in-memory `JSZip` via `buildEpubZip` directly
+rather than round-tripping through the produced `Blob`, since jsdom's `Blob` polyfill doesn't implement
+`.arrayBuffer()`; checks `mimetype` is first/uncompressed, the OPF manifest/spine matches chapter order, and
+XML escaping) **and validated against the real, official W3C `epubcheck` 5.1.0** (a two-chapter generated
+`.epub`, checked with `java -jar epubcheck.jar`, EPUB 3.3 rules): **0 fatals / 0 errors / 0 warnings / 0
+infos**. Not yet opened in an actual e-reader app (Apple Books, Calibre, an e-ink device) in this pass —
+`epubcheck` proves the file is spec-valid, not that every reading system renders it exactly as intended.
 
 ### Presets
 
