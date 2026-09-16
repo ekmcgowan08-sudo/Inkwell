@@ -107,7 +107,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Golden-path smoke test + 100k-word performance test (local-only mode)
+      - name: Golden-path smoke, 100k-word performance, and accessibility scans (local-only mode)
         run: npx playwright test --config tests/e2e/playwright.config.ts
 
       - uses: actions/upload-artifact@v4

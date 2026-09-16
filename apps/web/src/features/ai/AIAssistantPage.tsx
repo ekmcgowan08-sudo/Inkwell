@@ -146,7 +146,7 @@ export function AIAssistantPage() {
           placeholder="Ask about plot, consistency, or timeline…"
           aria-label="Ask the AI assistant"
         />
-        <Button onClick={() => send()} disabled={loading || !input.trim()}>
+        <Button onClick={() => send()} disabled={loading || !input.trim()} aria-label="Send message">
           <Send size={16} />
         </Button>
       </div>

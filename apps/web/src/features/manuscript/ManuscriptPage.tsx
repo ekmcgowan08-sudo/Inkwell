@@ -132,6 +132,7 @@ export function ManuscriptPage() {
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Placeholder.configure({ placeholder: "Begin writing…" }),
     ],
+    editorProps: { attributes: { "aria-label": "Manuscript scene editor" } },
     content: activeScene?.content ?? "",
     onUpdate: ({ editor }) => {
       if (loadingContent.current) return;

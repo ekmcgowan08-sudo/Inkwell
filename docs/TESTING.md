@@ -11,6 +11,7 @@
 | Edge Function typecheck | `deno check --config supabase/functions/deno.json supabase/functions/ai-assistant/index.ts` (and `account-delete`) | Both functions typecheck against the real npm dependency graph Deno would actually run | ✅ Auto, passing |
 | Playwright e2e | `npx playwright test --config tests/e2e/playwright.config.ts` | The full golden path in a real Chromium browser: create book → write → autosave → story bible → storyboard → timeline/goals → AI assistant → findings scan → exports → back to dashboard | ✅ Browser, passing |
 | Playwright performance (100k-word fixture) | `npx playwright test --config tests/e2e/playwright.config.ts tests/e2e/performance.spec.ts` | Generates a deterministic 40-chapter/~100,203-word manuscript, imports it through the real import UI, and measures import/chapter-switch/typing+autosave latency in a real Chromium browser — see below for actual numbers | ✅ Browser, passing |
+| Playwright accessibility scan (axe-core) | `npx playwright test --config tests/e2e/playwright.config.ts tests/e2e/accessibility.spec.ts` | Runs `@axe-core/playwright` (WCAG 2.0/2.1 A+AA rule sets) against every core screen — dashboard, new-book dialog, manuscript editor, story bible, storyboard, timeline & goals, AI assistant, AI findings, versions & backups, exports, book settings | ✅ Browser, passing (0 violations, after two real fixes — see below) |
 | Desktop Rust compile | `cd apps/desktop/src-tauri && cargo check` | The Tauri 2 shell (menu, plugins, close guard) compiles cleanly against the real toolchain | ✅ Auto, passing, zero warnings |
 
 ## What was NOT run, and why (be specific, don't hand-wave)
@@ -33,10 +34,6 @@
 - **Mobile app, at all.** No Expo/React Native toolchain, no simulator/emulator, no physical device. Written
   carefully but genuinely unverified — do not treat `apps/mobile` as tested in any sense beyond "a careful
   human read it."
-- **Automated accessibility scan** (axe-core or similar). Manual accessibility practices were followed
-  throughout (semantic landmarks, labeled form fields, `:focus-visible` styling, accessible dialogs with focus
-  trap and Escape-to-close, keyboard-operable storyboard reordering as a real alternative to drag-and-drop,
-  non-color status indicators, `prefers-reduced-motion` support) but never machine-checked.
 - **Database migration tests** in the sense of "apply migration N-1, apply N, verify no data loss" — the RLS
   suite applies all migrations fresh each run, which proves they succeed in order and together, but doesn't
   specifically test an incremental upgrade path against pre-existing data.
@@ -72,6 +69,26 @@ this does **not** cover: this sandbox's CPU/IO characteristics aren't representa
 and IndexedDB performance under a real browser profile (vs. Playwright's fresh profile per run) with years of
 accumulated data across many projects is untested. Run it yourself with `npx playwright test --config
 tests/e2e/playwright.config.ts tests/e2e/performance.spec.ts`.
+
+## Automated accessibility scan (axe-core, real findings)
+
+`tests/e2e/accessibility.spec.ts` runs `@axe-core/playwright` (WCAG 2.0/2.1 A+AA tags) against every core
+screen in a real Chromium browser, walking through the same golden path as the smoke test. This isn't a
+trivially-passing scan added for the sake of a checkbox — the first run found two real, `critical`/`serious`
+violations, both fixed in this pass:
+
+- **Manuscript editor** (`aria-input-field-name`, serious): Tiptap renders its editable surface as
+  `role="textbox"` with no accessible name, so a screen reader user landing in it would hear nothing
+  identifying what it is. Fixed with `editorProps: { attributes: { "aria-label": "Manuscript scene editor" } }`
+  in `ManuscriptPage.tsx`.
+- **AI Assistant** (`button-name`, critical): the icon-only send button (`<Send size={16} />`, no visible
+  text) had no `aria-label`, so it had no accessible name at all. Fixed by adding `aria-label="Send message"`.
+
+Currently passing with **0 violations** across dashboard, the new-book dialog, manuscript editor, story
+bible, storyboard, timeline & goals, AI assistant, AI findings, versions & backups, exports, and book
+settings. This scan only covers what axe-core can detect automatically (missing names/labels, contrast,
+landmark structure, ARIA misuse) — it does not replace real screen-reader testing (VoiceOver/NVDA/JAWS),
+which was not done in this pass.
 
 ## Running everything locally
 

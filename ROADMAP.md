@@ -48,7 +48,10 @@ for the full current-state detail behind each item.
   editor exist today); an on-device local-first store for offline mobile writing.
 - Subscription/entitlement UI and real payment integration (Stripe, Apple IAP, Google Play Billing) — schema
   supports it, nothing is wired to a real payment processor.
-- Automated accessibility scanning (axe-core) in CI.
+- ~~Automated accessibility scanning (axe-core) in CI.~~ **Done.** `tests/e2e/accessibility.spec.ts`
+  (`@axe-core/playwright`) scans every core screen; found and fixed two real violations (unlabeled Tiptap
+  editor, unlabeled send button), now passing with 0 violations. Runs automatically in the existing e2e CI
+  job. Doesn't replace real screen-reader testing.
 - PWA manifest/service worker for installable-web-app support.
 
 ## Longer-term / needs a product decision first, not just engineering

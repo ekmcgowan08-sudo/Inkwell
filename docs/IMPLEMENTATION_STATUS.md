@@ -102,11 +102,13 @@ suite (Docker-based, as CI runners have a real daemon unlike this sandbox), Deno
 Playwright e2e suite, and a Rust `cargo check` job with the exact Tauri Linux dependencies this repo verified
 work. **Not run on an actual GitHub Actions runner** in this pass — YAML-validated and modeled directly on the
 commands verified locally, but CI executing it for real is the first genuine test of the workflow itself.
-🟡 Accessibility: semantic landmarks, labeled form fields, focus-visible styling, accessible dialogs (focus
+✅ Accessibility: semantic landmarks, labeled form fields, focus-visible styling, accessible dialogs (focus
 trap, Escape-to-close, restore focus), keyboard-operable storyboard reordering (a real alternative to
 drag-and-drop, not just a nod to the requirement), non-color status indicators, reduced-motion support.
-**Not yet run through an automated accessibility checker** (axe or similar) — a concrete, well-scoped CI
-addition, not done in this pass.
+Now also machine-checked: `tests/e2e/accessibility.spec.ts` runs `@axe-core/playwright` against every core
+screen. **Verified: Browser** — first run found and this pass fixed two real violations (an unlabeled Tiptap
+editor region, an unlabeled icon-only send button); passing with 0 violations now. Does not replace real
+screen-reader testing, which wasn't done. See `docs/TESTING.md`.
 ❌ Formal unit/integration coverage is real but partial — nowhere near exhaustive across every module in the
 brief's testing matrix (two-device conflict against a live project, expired session, etc.). See
 `docs/TESTING.md` for the itemized "what was and wasn't run" list.
