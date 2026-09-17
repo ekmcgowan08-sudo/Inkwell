@@ -81,6 +81,8 @@ using the Supabase service-role key, which bypasses RLS:
 
 - `ai_messages`, `ai_findings` (written after a verified model call)
 - `ai_usage` (so a client can't erase or forge its own usage/allowance)
+- `ai_rate_limit_events` (the AI assistant's sliding-window rate limiter — no policies at all, so a
+  client can't read its own history or clear it to dodge the limit; see `docs/AI_ARCHITECTURE.md`)
 - `document_chunks` (written during (re)indexing)
 - `entitlements` (a client cannot grant itself a paid plan — proven in `tests/rls/run.ts`)
 - `generation_jobs` (written by the media-generate function)

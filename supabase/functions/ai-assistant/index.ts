@@ -24,6 +24,7 @@ import { createAnthropicProvider, DEFAULT_ANTHROPIC_MODEL } from "@inkwell/ai-co
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabaseClients.ts";
 import { buildContextFromSupabase } from "../_shared/buildContext.ts";
+import { checkAndRecordRateLimit } from "../_shared/rateLimit.ts";
 
 function currentPeriodMonth(): string {
   const now = new Date();
@@ -56,6 +57,19 @@ async function handleRequest(req: Request): Promise<Response> {
     } = await userClient.auth.getUser();
     if (authError || !user) throw new AssistantError("unauthorized", "Invalid or expired session.");
 
+    const serviceClient = createServiceClient();
+
+    // Sliding-window rate limit, checked before doing anything else — cheapest possible rejection
+    // for an abusive/looping client, independent of whether they're still under their monthly
+    // token budget. See supabase/functions/_shared/rateLimit.ts.
+    const rateLimit = await checkAndRecordRateLimit(serviceClient, user.id);
+    if (!rateLimit.allowed) {
+      throw new AssistantError(
+        "rate_limited",
+        `You're sending requests too quickly. Please wait ${rateLimit.retryAfterSeconds} seconds and try again.`,
+      );
+    }
+
     const parsed = assistantRequestSchema.safeParse(await req.json());
     if (!parsed.success) throw new AssistantError("invalid_request", parsed.error.message);
     const { projectId, mode, question, conversationId } = parsed.data;
@@ -69,11 +83,8 @@ async function handleRequest(req: Request): Promise<Response> {
     if (projectError) throw new AssistantError("provider_error", projectError.message);
     if (!project) throw new AssistantError("project_not_found", "Project not found.");
 
-    const serviceClient = createServiceClient();
-
-    // Usage allowance check — coarse (monthly token budget), not a
-    // sliding-window rate limiter. See docs/AI_ARCHITECTURE.md "known
-    // simplifications" for the documented follow-up.
+    // Usage allowance check — the real financial backstop (monthly token budget), separate from
+    // the burst-rate limit above.
     const periodMonth = currentPeriodMonth();
     const [{ data: entitlement }, { data: usage }] = await Promise.all([
       serviceClient.from("entitlements").select("ai_monthly_token_allowance").eq("user_id", user.id).maybeSingle(),

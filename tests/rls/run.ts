@@ -305,6 +305,20 @@ async function main() {
       );
     });
 
+    await test("ai_rate_limit_events is entirely server-only — no client can read or write it, even their own rows", async () => {
+      await asSuperuser(client!); // written only by the Edge Function's service-role client
+      await client!.query(`insert into public.ai_rate_limit_events (user_id) values ('${userA}')`);
+
+      await asUser(client!, userA);
+      const ownRows = await client!.query(`select id from public.ai_rate_limit_events where user_id = '${userA}'`);
+      assert(ownRows.rowCount === 0, "a client should not be able to see even its own rate-limit events");
+
+      await expectRejected(
+        () => client!.query(`insert into public.ai_rate_limit_events (user_id) values ('${userA}')`),
+        "expected a direct client insert into ai_rate_limit_events to be rejected — it has no policies at all",
+      );
+    });
+
     await test("a client cannot grant itself a paid entitlement", async () => {
       await asUser(client!, userB);
       // No UPDATE policy exists on entitlements for `authenticated`, so RLS

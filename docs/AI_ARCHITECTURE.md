@@ -19,23 +19,25 @@ time and this document can't stay current with that.
 1. Client calls `supabase.functions.invoke("ai-assistant", { body: AssistantRequest })`. The Supabase JS SDK
    attaches the signed-in user's access token as the `Authorization` header automatically.
 2. The function verifies that token (`userClient.auth.getUser()`) — no valid session, no response.
-3. It re-derives project ownership **by querying through a client authenticated as that user**
+3. It checks the sliding-window rate limit (`_shared/rateLimit.ts`) — the cheapest possible rejection, before
+   even parsing the request body, so a looping/abusive client is turned away with minimal work done.
+4. It re-derives project ownership **by querying through a client authenticated as that user**
    (`createUserClient`, `_shared/supabaseClients.ts`), not by trusting the `projectId` in the request body. RLS
    makes a project you don't own behave exactly like a project that doesn't exist — the function can't
    distinguish the two, which is the point (no existence-leak).
-4. It checks a monthly token allowance (`entitlements.ai_monthly_token_allowance` vs. summed `ai_usage` for the
+6. It checks a monthly token allowance (`entitlements.ai_monthly_token_allowance` vs. summed `ai_usage` for the
    current `YYYY-MM`) before doing anything that costs money.
-5. It builds a **bounded** context (`_shared/buildContext.ts`) — never the full manuscript. See "Context
+7. It builds a **bounded** context (`_shared/buildContext.ts`) — never the full manuscript. See "Context
    budgeting" below.
-6. It builds the system prompt (`packages/ai-contracts/src/promptBuilder.ts`) — one shared function, so the
+8. It builds the system prompt (`packages/ai-contracts/src/promptBuilder.ts`) — one shared function, so the
    Edge Function and the web app's local-only mode produce the same style of prompt.
-7. It calls the provider (real Anthropic, or the deterministic test provider if `ANTHROPIC_API_KEY` is unset —
+9. It calls the provider (real Anthropic, or the deterministic test provider if `ANTHROPIC_API_KEY` is unset —
    this fallback exists so a Supabase project without AI credentials configured still returns *something*
    instead of a hard failure, clearly logged as a fallback).
-8. It parses bracketed citations out of the response (`parseCitations`), persists both the user's question and
-   the assistant's answer via the **service-role** client (bypassing RLS deliberately — this is the one path
-   allowed to write `ai_messages`, see `docs/DATA_MODEL.md` "server-only write paths"), updates `ai_usage`, and
-   returns the answer with citations, a context summary, and a groundedness label.
+10. It parses bracketed citations out of the response (`parseCitations`), persists both the user's question and
+    the assistant's answer via the **service-role** client (bypassing RLS deliberately — this is the one path
+    allowed to write `ai_messages`, see `docs/DATA_MODEL.md` "server-only write paths"), updates `ai_usage`, and
+    returns the answer with citations, a context summary, and a groundedness label.
 
 ## Context budgeting ("never send the whole manuscript")
 
@@ -89,10 +91,22 @@ this pass. Don't read more precision into the badge than "the model had *somethi
   pricing table (`PRICING_CHECKED_AT`) used only to *estimate* spend in `ai_usage.estimated_cost_usd_micros` —
   never treated as an authoritative bill. Verify against <https://www.anthropic.com/pricing> before relying on
   it for anything financial; see `docs/COSTS.md`.
-- **Rate limiting is coarse, not a sliding window.** The monthly allowance is the real gate. There is
-  deliberately no per-minute/per-second request throttle in this pass — a burst of requests within one's
-  monthly allowance will all be served. A proper sliding-window limiter (e.g., a `rate_limit_events` table or
-  an external store like Upstash) is a documented follow-up, not something to claim as done.
+- **Sliding-window rate limiting**: `checkAndRecordRateLimit` (`supabase/functions/_shared/rateLimit.ts`) caps
+  a user to `RATE_LIMIT_MAX_REQUESTS` (8) AI Assistant calls per `RATE_LIMIT_WINDOW_SECONDS` (60), backed by a
+  small server-only Postgres table (`ai_rate_limit_events`, migration `0012_ai_rate_limiting.sql` — RLS
+  enabled with **zero policies**, so no client can read or write it under any circumstance, proven in
+  `tests/rls/run.ts`). Checked first, before parsing the request body or touching the monthly allowance, so
+  an abusive/looping client is rejected as cheaply as possible. Old events for a user are opportunistically
+  pruned on each check rather than needing a separate scheduled job. This is deliberately a Postgres table,
+  not an external store (Redis/Upstash) — this sandbox and most self-hosted Supabase deployments don't have
+  one, and an AI assistant endpoint's request volume is low enough for Postgres to be a fine backing store.
+  **Known limitation, stated plainly**: the check-then-insert is two round trips, not one atomic statement, so
+  genuinely simultaneous requests from the same user (e.g. two browser tabs firing at once) could both pass
+  the check before either commits. This is an abuse throttle, not the financial backstop — the monthly token
+  allowance (checked separately, against already-committed usage rows) is still what actually caps spend, so
+  a few requests slipping through a race isn't a budget breach. **Verified: Auto**
+  (`supabase/functions/_shared/rateLimit.test.ts` against a mocked Supabase client, plus the RLS isolation
+  test above); not exercised against a live Supabase project.
 - **No provider call happens unless the user initiates one.** There is no background job, cron, or
   auto-trigger anywhere in this codebase that calls the AI without a direct user action (asking a question, or
   clicking "Run consistency scan" — which itself is a zero-cost local rule-based scan, not a model call; see

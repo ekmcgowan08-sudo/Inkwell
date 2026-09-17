@@ -40,7 +40,12 @@ for the full current-state detail behind each item.
 - Series-level AI continuity scope (contract and schema exist; no UI toggle yet).
 - Automated conversion of AI Assistant consistency-check answers into persisted `ai_findings` (needs a
   scheduled job).
-- Sliding-window AI rate limiting beyond the current monthly-allowance check.
+- ~~Sliding-window AI rate limiting beyond the current monthly-allowance check.~~ **Done.**
+  `checkAndRecordRateLimit` (8 requests/60s per user, backed by a server-only `ai_rate_limit_events` table —
+  zero RLS policies, proven unreadable/unwritable by any client) runs before anything else in the Edge
+  Function. Unit-tested against a mocked Supabase client and RLS-proven; has a documented, acceptable race
+  (two simultaneous requests could both pass the check) since the monthly token allowance remains the real
+  financial backstop.
 - Google Drive integration (backup/export/import to a connected Drive folder).
 - Media generation (character portraits, location concepts, cover concepts) — schema and architecture are
   ready; needs a provider decision and UI.
