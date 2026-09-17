@@ -72,14 +72,18 @@ async function handleRequest(req: Request): Promise<Response> {
 
     const parsed = assistantRequestSchema.safeParse(await req.json());
     if (!parsed.success) throw new AssistantError("invalid_request", parsed.error.message);
-    const { projectId, mode, question, conversationId } = parsed.data;
+    const { projectId, mode, question, conversationId, seriesScope } = parsed.data;
 
     // Ownership check happens BY QUERYING THROUGH THE USER'S OWN CLIENT: RLS
     // means this returns null for a project the caller doesn't own, exactly
     // as if it didn't exist — no separate "is this yours" check needed, and
     // no way to distinguish "not found" from "not yours" (avoids leaking
     // existence of other users' projects).
-    const { data: project, error: projectError } = await userClient.from("projects").select("id, title").eq("id", projectId).maybeSingle();
+    const { data: project, error: projectError } = await userClient
+      .from("projects")
+      .select("id, title, series_id")
+      .eq("id", projectId)
+      .maybeSingle();
     if (projectError) throw new AssistantError("provider_error", projectError.message);
     if (!project) throw new AssistantError("project_not_found", "Project not found.");
 
@@ -125,7 +129,10 @@ async function handleRequest(req: Request): Promise<Response> {
       resolvedConversationId = created.id;
     }
 
-    const ctx = await buildContextFromSupabase(userClient, projectId, project.title, conversationId, question);
+    const ctx = await buildContextFromSupabase(userClient, projectId, project.title, conversationId, question, {
+      seriesId: project.series_id,
+      seriesScope,
+    });
     const system = buildSystemPrompt(mode, ctx);
     const provider = selectProvider();
     const completion = await provider.complete({ system, user: question, maxTokens: 1024 });

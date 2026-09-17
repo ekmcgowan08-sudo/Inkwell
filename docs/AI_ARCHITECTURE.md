@@ -67,6 +67,25 @@ recency-bounded sample rather than handing the model an empty context bundle. **
 fallback, and empty-question cases) and the RLS suite; not yet exercised against a live Supabase project with
 real manuscript content.
 
+## Series-level continuity (opt-in, off by default)
+
+`AssistantRequest.seriesScope` (default `false`) is the explicit opt-in — the assistant never reads outside
+the active project unless the author asks *and* the project actually belongs to a series. When both are true,
+`fetchSeriesContext` (`_shared/buildContext.ts`) pulls a small, separately-bounded, book-labeled slice from up
+to `MAX_SERIES_BOOKS` (4) other books in the same series: `MAX_SERIES_CHAPTERS_PER_BOOK` (5) chapter summaries,
+`MAX_SERIES_CANON_FACTS_PER_BOOK` (10) approved canon facts, and `MAX_SERIES_STORY_BIBLE_PER_BOOK` (10) story
+bible entries per book — all exported from `packages/ai-contracts/src/contracts.ts` so the server-side and
+local-only (`apps/web/src/lib/aiLocalContext.ts`) context builders apply the same limits. Each cross-book item
+is prefixed with that book's title (`"[Book Two] Chapter One"`) so both the model and the author reading the
+context summary can tell which book a fact came from. This uses the same `userClient` (RLS-scoped) as
+everything else — a sibling "book" in the series query can structurally only ever be one of the caller's own
+projects (RLS on `projects`, already proven in `tests/rls/run.ts`; a project's `series_id` is also
+constrained at the schema level to belong to a series the same user owns). The UI toggle ("Also consider the
+other books in this series") only appears on the AI Assistant page when the active book has a series.
+Local-only mode mirrors chapter summaries and story bible entries from Dexie, but not canon facts — there's no
+local `canon_facts` table at all, a pre-existing gap unrelated to this feature. **Verified: Auto**
+(`buildContext.test.ts`, `aiLocalContext.test.ts`); not exercised against a live Supabase project.
+
 ## Citations and groundedness
 
 The system prompt instructs the model to reference `[chapter:<id>]`, `[scene:<id>]`, `[story_bible_entry:<id>]`,

@@ -12,8 +12,15 @@ import { buildLocalContext } from "./aiLocalContext";
 import { isLocalOnlyMode } from "./env";
 import { getSupabase } from "./supabase";
 
-async function askAssistantLocal(projectId: string, userId: string, mode: AIMode, question: string, conversationId: string | null) {
-  const ctx = await buildLocalContext(projectId);
+async function askAssistantLocal(
+  projectId: string,
+  userId: string,
+  mode: AIMode,
+  question: string,
+  conversationId: string | null,
+  seriesScope: boolean,
+) {
+  const ctx = await buildLocalContext(projectId, seriesScope);
   const system = buildSystemPrompt(mode, ctx);
   const provider = createTestProvider();
   const completion = await provider.complete({ system, user: question });
@@ -64,7 +71,7 @@ async function askAssistantLocal(projectId: string, userId: string, mode: AIMode
   };
 }
 
-async function askAssistantCloud(projectId: string, mode: AIMode, question: string, conversationId: string | null) {
+async function askAssistantCloud(projectId: string, mode: AIMode, question: string, conversationId: string | null, seriesScope: boolean) {
   const supabase = getSupabase()!;
   const {
     data: { session },
@@ -75,7 +82,7 @@ async function askAssistantCloud(projectId: string, mode: AIMode, question: stri
   // the Edge Function can verify the caller's identity server-side — the
   // client never has to (and never should) hold a privileged key itself.
   const { data, error } = await supabase.functions.invoke("ai-assistant", {
-    body: { projectId, mode, question, conversationId, seriesScope: false },
+    body: { projectId, mode, question, conversationId, seriesScope },
   });
   if (error) throw new Error(error.message ?? "The AI assistant is unavailable right now.");
   return data as {
@@ -93,7 +100,8 @@ export async function askAssistant(
   mode: AIMode,
   question: string,
   conversationId: string | null,
+  seriesScope = false,
 ) {
-  if (isLocalOnlyMode) return askAssistantLocal(projectId, userId, mode, question, conversationId);
-  return askAssistantCloud(projectId, mode, question, conversationId);
+  if (isLocalOnlyMode) return askAssistantLocal(projectId, userId, mode, question, conversationId, seriesScope);
+  return askAssistantCloud(projectId, mode, question, conversationId, seriesScope);
 }

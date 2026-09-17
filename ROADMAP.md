@@ -37,7 +37,10 @@ for the full current-state detail behind each item.
 
 ## Medium-term
 
-- Series-level AI continuity scope (contract and schema exist; no UI toggle yet).
+- ~~Series-level AI continuity scope~~ **Done.** A checkbox on the AI Assistant page (shown only when the
+  book has a series) sets `seriesScope: true`; the context builder then pulls a small, book-labeled,
+  separately-bounded slice of chapters/canon facts/story bible entries from up to 4 sibling books, both
+  server-side and in local-only mode. Off by default. Unit-tested; not exercised against a live project.
 - Automated conversion of AI Assistant consistency-check answers into persisted `ai_findings` (needs a
   scheduled job).
 - ~~Sliding-window AI rate limiting beyond the current monthly-allowance check.~~ **Done.**

@@ -43,6 +43,7 @@ export function AIAssistantPage() {
   const [mode, setMode] = useState<AIMode>("ask");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [seriesScope, setSeriesScope] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const messages = useLiveQuery(
@@ -60,7 +61,7 @@ export function AIAssistantPage() {
     setInput("");
     setLoading(true);
     try {
-      const result = await askAssistant(project.id, userId, mode, question, conversationId);
+      const result = await askAssistant(project.id, userId, mode, question, conversationId, seriesScope);
       setConversationId(result.conversationId);
     } catch (err) {
       show((err as Error).message, "danger");
@@ -76,7 +77,9 @@ export function AIAssistantPage() {
           <Sparkles size={18} color="var(--color-accent)" /> AI Assistant
         </div>
         <p className="iw-help-text" style={{ marginTop: 4 }}>
-          Scoped to "{project.title}" only — reads this book's manuscript, story bible, and timeline, nothing else.
+          {seriesScope
+            ? `Scoped to "${project.title}" plus a summary of the other books in its series.`
+            : `Scoped to "${project.title}" only — reads this book's manuscript, story bible, and timeline, nothing else.`}
           {isLocalOnly && " Running in local test mode: responses come from a deterministic test provider, not a real model."}
         </p>
         <div style={{ marginTop: 12, maxWidth: 280 }}>
@@ -88,6 +91,12 @@ export function AIAssistantPage() {
             ))}
           </SelectField>
         </div>
+        {project.seriesId && (
+          <label className="iw-help-text" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <input type="checkbox" checked={seriesScope} onChange={(e) => setSeriesScope(e.target.checked)} />
+            Also consider the other books in this series
+          </label>
+        )}
       </div>
 
       <div className="iw-ai-messages" ref={scrollRef}>

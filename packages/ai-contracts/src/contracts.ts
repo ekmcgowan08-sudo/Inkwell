@@ -27,6 +27,16 @@ export const assistantResponseSchema = z.object({
 });
 export type AssistantResponse = z.infer<typeof assistantResponseSchema>;
 
+/**
+ * Bounds for the optional cross-book series-continuity context (`AssistantRequest.seriesScope`),
+ * shared by the server-side context builder (`supabase/functions/_shared/buildContext.ts`) and the
+ * local-only one (`apps/web/src/lib/aiLocalContext.ts`) so both apply the same limits.
+ */
+export const MAX_SERIES_BOOKS = 4;
+export const MAX_SERIES_CHAPTERS_PER_BOOK = 5;
+export const MAX_SERIES_CANON_FACTS_PER_BOOK = 10;
+export const MAX_SERIES_STORY_BIBLE_PER_BOOK = 10;
+
 /** The bounded context assembled server-side for one AI request. Never the full manuscript — see docs/AI_ARCHITECTURE.md. */
 export interface ContextBundle {
   projectTitle: string;
