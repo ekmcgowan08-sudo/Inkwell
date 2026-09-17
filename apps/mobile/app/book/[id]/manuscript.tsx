@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { darkTheme } from "@inkwell/design-tokens";
 import { countWords, toCamelRow, type Chapter, type Scene } from "@inkwell/shared-types";
@@ -19,6 +19,7 @@ const AUTOSAVE_IDLE_MS = 1500;
  */
 export default function ManuscriptScreen() {
   const { id: projectId } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [activeScene, setActiveScene] = useState<Scene | null>(null);
@@ -93,6 +94,12 @@ export default function ManuscriptScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <View style={styles.navRow}>
+        <Text style={[styles.navLink, styles.navLinkActive]}>Manuscript</Text>
+        <Pressable onPress={() => router.replace(`/book/${projectId}/story-bible`)} accessibilityRole="button">
+          <Text style={styles.navLink}>Story Bible</Text>
+        </Pressable>
+      </View>
       <ScrollView horizontal style={styles.chapterBar} showsHorizontalScrollIndicator={false}>
         {chapters.map((c) => (
           <Pressable
@@ -130,6 +137,9 @@ export default function ManuscriptScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: darkTheme.bg },
   center: { flex: 1, backgroundColor: darkTheme.bg, alignItems: "center", justifyContent: "center" },
+  navRow: { flexDirection: "row", gap: 20, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  navLink: { color: darkTheme.textSecondary, fontSize: 14, fontWeight: "600" },
+  navLinkActive: { color: darkTheme.accent },
   chapterBar: { flexGrow: 0, paddingHorizontal: 12, paddingVertical: 10 },
   chapterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: darkTheme.bgElevated, marginRight: 8, minHeight: 40, justifyContent: "center" },
   chapterChipActive: { backgroundColor: darkTheme.primary },

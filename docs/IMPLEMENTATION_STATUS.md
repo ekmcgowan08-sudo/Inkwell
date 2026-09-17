@@ -82,8 +82,10 @@ this environment. `tauri dev`/`tauri build` (needs a display server and, for ins
 
 **Mobile (`apps/mobile`)**: 🟡 Real but deliberately v0-scoped. Expo Router app reusing
 `@inkwell/shared-types`/`design-tokens`/`api-client`: login, a Library tab with real RLS-protected Supabase
-queries, a plain-text (not rich-text) manuscript editor with debounced autosave, secure token storage
-(`expo-secure-store`, not AsyncStorage), AppState-aware token refresh. Story bible, storyboard, timeline, AI
+queries, a plain-text (not rich-text) manuscript editor with debounced autosave, a story bible screen
+(`book/[id]/story-bible.tsx` — flat list of entries with inline name/summary editing and debounced autosave,
+a "+ New Character" button; no per-type tabs, relationships, tags, or appearances UI yet), secure token
+storage (`expo-secure-store`, not AsyncStorage), AppState-aware token refresh. Storyboard, timeline, AI
 assistant, and an on-device local-first store are **not** built for mobile yet — mobile currently requires a
 configured Supabase backend (no local-only fallback the way web has). **Verified: Auto (typecheck only)** —
 `pnpm --filter @inkwell/mobile typecheck` now passes cleanly and runs in CI; it didn't in earlier passes
