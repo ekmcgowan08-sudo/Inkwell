@@ -29,6 +29,7 @@ jobs:
           pnpm --filter @inkwell/api-client typecheck
           pnpm --filter @inkwell/ai-contracts typecheck
           pnpm --filter @inkwell/web typecheck
+          pnpm --filter @inkwell/mobile typecheck
 
       - name: Unit tests
         run: |

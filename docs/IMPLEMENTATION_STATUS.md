@@ -85,9 +85,17 @@ this environment. `tauri dev`/`tauri build` (needs a display server and, for ins
 queries, a plain-text (not rich-text) manuscript editor with debounced autosave, secure token storage
 (`expo-secure-store`, not AsyncStorage), AppState-aware token refresh. Story bible, storyboard, timeline, AI
 assistant, and an on-device local-first store are **not** built for mobile yet — mobile currently requires a
-configured Supabase backend (no local-only fallback the way web has). **Not verified at all** — no
-Expo/React Native toolchain, simulator, emulator, or device was available in this environment; written
-carefully by hand, never typechecked or run. Treat as unverified, full stop.
+configured Supabase backend (no local-only fallback the way web has). **Verified: Auto (typecheck only)** —
+`pnpm --filter @inkwell/mobile typecheck` now passes cleanly and runs in CI; it didn't in earlier passes
+because `apps/mobile`'s `node_modules` had never actually been installed in this environment (fixed simply by
+running `pnpm install`), plus two real gaps this pass fixed: `apps/mobile/tsconfig.json` was missing
+`moduleResolution: "bundler"` / `allowImportingTsExtensions` (needed for the shared packages' `.ts`-extension
+imports, same as `apps/web`'s tsconfig — Metro's own runtime bundling is unaffected, this is tsc-only), and
+`@supabase/supabase-js` wasn't a direct dependency even though `lib/supabase.ts`/`lib/auth.tsx` import its
+types directly. **Still not run as an app** — no Expo/React Native toolchain beyond `tsc`, no simulator,
+emulator, or physical device was available in this environment. A clean typecheck is real signal (it wasn't
+achievable before) but is not the same claim as "runs correctly on a device" — treat it as exactly that much
+verification, no more.
 
 ## Phase 10 — Media, subscriptions
 ⚪ Not started. Schema (`media_assets`, `generation_jobs`, `entitlements`) exists and is RLS-protected, with
@@ -141,9 +149,10 @@ has ever actually run this schema in production (Prod creds required to verify t
 (non-test) Anthropic-backed AI path is written and Deno-typechecked/unit-tested but not exercised against a
 live model, sync is local-first-with-best-effort-push with revision-gated writes and a real conflict-resolution
 UI now in place but unproven against a live multi-device session (only mocked-network unit tests so far — see
-`docs/SYNC_AND_CONFLICTS.md`), and mobile is a genuine but narrow v0 (login + library + plain-text editor) that could not be run or
-typechecked at all in this environment. Every one of those gaps is stated specifically, above, with a concrete
-next step — not glossed over.
+`docs/SYNC_AND_CONFLICTS.md`), and mobile is a genuine but narrow v0 (login + library + plain-text editor) that
+now typechecks cleanly (a real gap this pass fixed — missing dependencies, a tsconfig mismatch) but has still
+never been run as an app in this environment (no Expo toolchain, simulator, or device). Every one of those
+gaps is stated specifically, above, with a concrete next step — not glossed over.
 
 ## Final verification pass (end of session)
 Re-run immediately before this update, all green: shared-types/design-tokens/api-client/ai-contracts/web

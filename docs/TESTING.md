@@ -13,6 +13,7 @@
 | Playwright performance (100k-word fixture) | `npx playwright test --config tests/e2e/playwright.config.ts tests/e2e/performance.spec.ts` | Generates a deterministic 40-chapter/~100,203-word manuscript, imports it through the real import UI, and measures import/chapter-switch/typing+autosave latency in a real Chromium browser — see below for actual numbers | ✅ Browser, passing |
 | Playwright accessibility scan (axe-core) | `npx playwright test --config tests/e2e/playwright.config.ts tests/e2e/accessibility.spec.ts` | Runs `@axe-core/playwright` (WCAG 2.0/2.1 A+AA rule sets) against every core screen — dashboard, new-book dialog, manuscript editor, story bible, storyboard, timeline & goals, AI assistant, AI findings, versions & backups, exports, book settings | ✅ Browser, passing (0 violations, after two real fixes — see below) |
 | Desktop Rust compile | `cd apps/desktop/src-tauri && cargo check` | The Tauri 2 shell (menu, plugins, close guard) compiles cleanly against the real toolchain | ✅ Auto, passing, zero warnings |
+| Mobile typecheck | `pnpm --filter @inkwell/mobile typecheck` | The Expo Router app (login, Library, plain-text manuscript editor) typechecks against the real dependency graph — not run as an app (no Expo toolchain/simulator/device here) | ✅ Auto, passing (newly fixed this pass — see `docs/IMPLEMENTATION_STATUS.md` Phase 8/9) |
 
 ## What was NOT run, and why (be specific, don't hand-wave)
 
@@ -31,9 +32,11 @@
 - **Desktop app runtime** (`tauri dev`/`tauri build`). No display server in this sandbox, and full installer
   bundling needs `linuxdeploy`/`appimagetool`/code-signing tooling not installed here. Compile-verified only
   (see above).
-- **Mobile app, at all.** No Expo/React Native toolchain, no simulator/emulator, no physical device. Written
-  carefully but genuinely unverified — do not treat `apps/mobile` as tested in any sense beyond "a careful
-  human read it."
+- **Mobile app, running.** `pnpm --filter @inkwell/mobile typecheck` now passes (a real gap this pass fixed
+  — see `docs/IMPLEMENTATION_STATUS.md`), but that's the only mechanical verification it has. No Expo/React
+  Native toolchain, no simulator/emulator, no physical device is available in this environment, so `apps/mobile`
+  has never actually been run as an app. Treat it as "typechecks against the real dependency graph," not
+  "works."
 - **Database migration tests** in the sense of "apply migration N-1, apply N, verify no data loss" — the RLS
   suite applies all migrations fresh each run, which proves they succeed in order and together, but doesn't
   specifically test an incremental upgrade path against pre-existing data.

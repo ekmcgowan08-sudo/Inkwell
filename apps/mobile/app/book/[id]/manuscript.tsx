@@ -64,6 +64,10 @@ export default function ManuscriptScreen() {
       setSaveState("saving");
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
+        // `as never`: the placeholder Database type (packages/api-client/src/database.types.ts,
+        // not yet generated from a real project) types every table as a generic Record, which
+        // confuses supabase-js's `.update()` overload resolution — same cast apps/web's sync.ts
+        // uses for the same reason. Runtime behavior against PostgREST is unaffected either way.
         await getSupabase()
           .from("scenes")
           .update({
@@ -71,7 +75,7 @@ export default function ManuscriptScreen() {
             word_count: countWords(nextText),
             content: { type: "doc", content: [{ type: "paragraph", content: nextText ? [{ type: "text", text: nextText }] : [] }] },
             revision: activeScene.revision + 1,
-          })
+          } as never)
           .eq("id", activeScene.id);
         setSaveState("saved");
       }, AUTOSAVE_IDLE_MS);

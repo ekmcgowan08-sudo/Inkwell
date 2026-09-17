@@ -2,6 +2,13 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // moduleResolution/allowImportingTsExtensions match apps/web's tsconfig (see
+    // tsconfig.base.json): the shared packages import each other with explicit .ts extensions
+    // (ESM-style, so the same source resolves under both Vite's bundler resolution and Deno).
+    // Metro's own runtime module resolution is unaffected by this — it's tsc-only, for
+    // typechecking accuracy.
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./*"]
     }
