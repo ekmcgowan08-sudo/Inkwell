@@ -52,7 +52,11 @@ for the full current-state detail behind each item.
   (`@axe-core/playwright`) scans every core screen; found and fixed two real violations (unlabeled Tiptap
   editor, unlabeled send button), now passing with 0 violations. Runs automatically in the existing e2e CI
   job. Doesn't replace real screen-reader testing.
-- PWA manifest/service worker for installable-web-app support.
+- ~~PWA manifest/service worker for installable-web-app support.~~ **Done.** `vite-plugin-pwa`
+  (`generateSW`, `registerType: "autoUpdate"`), a manifest, and reused desktop/mobile-matching icons.
+  Deliberately precaches only the app's own build output (no `runtimeCaching`, confirmed by inspecting the
+  generated service worker), so Supabase auth/API traffic is untouched. Verified against a real production
+  build with a real Chromium instance — manifest resolves, service worker registers and activates.
 
 ## Longer-term / needs a product decision first, not just engineering
 

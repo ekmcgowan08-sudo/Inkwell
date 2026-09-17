@@ -50,9 +50,19 @@ test provider. This is genuinely usable, not a degraded demo — every module wo
 
 `apps/web` is a standard Vite SPA (`pnpm --filter @inkwell/web build` → `apps/web/dist/`). Any static host that
 serves an SPA with a catch-all rewrite to `index.html` works (Vercel, Netlify, Cloudflare Pages, a plain
-nginx config). No server-side rendering is used or required. As a PWA: no service worker/manifest was added in
-this pass — a concrete, well-scoped next step (Vite's PWA plugin ecosystem handles this with little custom
-code).
+nginx config). No server-side rendering is used or required.
+
+**Installable as a PWA**: `vite-plugin-pwa` (`apps/web/vite.config.ts`) generates a web app manifest
+(`manifest.webmanifest`) and a Workbox service worker on every production build. `registerType: "autoUpdate"`
+means a new deploy's service worker takes over automatically on next load, no user prompt. Deliberately no
+`runtimeCaching` rules — Workbox precaches only this build's own JS/CSS/HTML/icons (confirmed by inspecting
+the generated `dist/sw.js`), never Supabase auth/API requests, so cloud sync behavior is unaffected by the
+service worker either way. Verified against a real production build: `manifest.webmanifest` and `sw.js` serve
+correctly from `vite preview`, and a real Chromium instance (via Playwright) confirms the manifest `<link>`
+resolves and the service worker actually registers and activates. Icons
+(`apps/web/public/icons/icon-{192,512}.png`, `apple-touch-icon.png`, `favicon-32.png`) reuse the same
+ink-navy/gold mark already used for the desktop and mobile app icons — see
+`docs/OWNER_ACTIONS_REQUIRED.md` for real branding, which hasn't been commissioned yet.
 
 ## Desktop builds
 

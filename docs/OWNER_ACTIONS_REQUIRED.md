@@ -58,8 +58,9 @@ items off as you complete them (this file is meant to be edited).
       which has placeholder fields (`REPLACE_WITH_...`) for your Apple Team ID, App Store Connect app ID, and
       a Google Play service-account JSON path.
 - [ ] Generate app icons/splash screens for real (see `docs/STORE_SUBMISSION.md`) — every icon currently in
-      `apps/desktop/src-tauri/icons/` and `apps/mobile/assets/` is a programmatically-generated placeholder
-      (solid ink-navy square with a gold mark), not final branding.
+      `apps/desktop/src-tauri/icons/`, `apps/mobile/assets/`, and `apps/web/public/icons/` (the PWA manifest
+      icons) is the same programmatically-generated placeholder (solid ink-navy square with a gold mark), not
+      final branding.
 
 ## 6. Optional integrations (skip any you don't want yet — the app works without all of these)
 
