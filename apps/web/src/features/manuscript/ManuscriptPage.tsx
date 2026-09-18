@@ -25,6 +25,7 @@ import {
   softDeleteChapter,
 } from "../../lib/repos/manuscript";
 import { recordWordsWrittenToday } from "../../lib/repos/storyboardTimeline";
+import { endWritingSession, startWritingSession } from "../../lib/repos/writingSessions";
 import { countWords, estimatePageCount, estimateReadingMinutes, extractPlainText } from "@inkwell/shared-types";
 import { Button, IconButton } from "../../components/ui/Button";
 import { ConfirmDialog } from "../../components/ui/Dialog";
@@ -94,6 +95,7 @@ export function ManuscriptPage() {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("saved");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadingContent = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
 
   // Native desktop menu items (View > Toggle Focus Mode / Edit > Find &
   // Replace) — no-ops in a plain browser. See lib/desktopBridge.ts.
@@ -136,6 +138,11 @@ export function ManuscriptPage() {
     content: activeScene?.content ?? "",
     onUpdate: ({ editor }) => {
       if (loadingContent.current) return;
+      if (userId && !sessionIdRef.current) {
+        startWritingSession(project.id, userId, wordCount).then((s) => {
+          sessionIdRef.current = s.id;
+        });
+      }
       setSaveState("saving");
       if (saveTimer.current) clearTimeout(saveTimer.current);
       const sceneId = activeScene?.id;
@@ -150,6 +157,28 @@ export function ManuscriptPage() {
       }, AUTOSAVE_IDLE_MS);
     },
   });
+
+  // Best-effort writing-session end: tab hidden (switched away, closed) or leaving this page
+  // entirely. A hard crash/force-quit leaves the session with endedAt: null forever — accepted,
+  // harmless (see writingSessions.ts). Not tied to scene/chapter switches within the same visit,
+  // since those are still the same continuous writing session.
+  useEffect(() => {
+    async function endCurrentSession() {
+      if (!sessionIdRef.current) return;
+      const id = sessionIdRef.current;
+      sessionIdRef.current = null;
+      const total = await projectWordCount(project.id);
+      await endWritingSession(id, total);
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === "hidden") void endCurrentSession();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      void endCurrentSession();
+    };
+  }, [project.id]);
 
   // Swap editor content when the active scene changes (chapter switch, scene tab click).
   useEffect(() => {

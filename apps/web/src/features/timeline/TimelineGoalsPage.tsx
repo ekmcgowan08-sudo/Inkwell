@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Target, Flame, Trash2, AlertTriangle } from "lucide-react";
+import { Clock, Plus, Target, Flame, Trash2, AlertTriangle } from "lucide-react";
 import { useProjectContext } from "../project/ProjectLayout";
 import { useAuth } from "../../lib/auth";
 import { db } from "../../lib/db";
@@ -15,6 +15,7 @@ import {
   setDailyGoal,
   updateTimelineEvent,
 } from "../../lib/repos/storyboardTimeline";
+import { listRecentSessions } from "../../lib/repos/writingSessions";
 import { projectWordCount } from "../../lib/repos/manuscript";
 import { updateProject } from "../../lib/repos/projects";
 import { Button, IconButton } from "../../components/ui/Button";
@@ -30,6 +31,7 @@ export function TimelineGoalsPage() {
 
   const events = useLiveQuery(() => db.timelineEvents.where("projectId").equals(project.id).sortBy("sortOrder"), [project.id]) ?? [];
   const dailyGoal = useLiveQuery(() => getActiveDailyGoal(project.id), [project.id]);
+  const recentSessions = useLiveQuery(() => listRecentSessions(project.id, 5), [project.id]) ?? [];
   const conflicts = detectTimelineConflicts(events);
 
   useEffect(() => {
@@ -129,6 +131,29 @@ export function TimelineGoalsPage() {
                     <span style={{ width: 48, textAlign: "right" }}>{h.wordsWritten}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {recentSessions.length > 0 && (
+            <div className="iw-card" style={{ padding: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <Clock size={16} color="var(--color-accent)" />
+                <span style={{ fontWeight: 600 }}>Recent Sessions</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {recentSessions.map((s) => {
+                  const words = s.wordsEnd - s.wordsStart;
+                  const minutes = Math.max(1, Math.round((new Date(s.endedAt!).getTime() - new Date(s.startedAt).getTime()) / 60000));
+                  return (
+                    <div key={s.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                      <span className="iw-help-text">{new Date(s.startedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      <span>
+                        {minutes} min · {words >= 0 ? "+" : ""}{words.toLocaleString()} words
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

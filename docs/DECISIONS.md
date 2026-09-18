@@ -4,6 +4,39 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-18 — Found and fixed another real false claim: `writing_sessions` was documented as "real persisted" but was dead code
+While closing out the appearances gap, went looking for the same failure pattern elsewhere: a Dexie table
+declared in `db.ts` with zero reads/writes anywhere else in `apps/web`. Found `writingSessions` — and
+`docs/IMPLEMENTATION_STATUS.md` Phase 6 had it listed under "Real persisted daily writing-progress and
+streaks (`daily_progress`, `writing_sessions`) ... **Verified: Browser**." That verification claim was false:
+the table had a schema, RLS policies (isolation-tested in the earlier RLS audit this session), and a Zod
+type, but no Dexie table, no repo, and nothing in the UI ever touched it. This is the third instance this
+session of the same shape of bug — UI copy or doc claims ahead of what the code actually does (rest-days
+streak math, appearances, now this) — worth calling out as a pattern: an unused schema table with a
+plausible-sounding doc line next to it is a cheap, repeatable thing to audit for.
+
+Implemented it for real: `startWritingSession`/`endWritingSession`
+(`apps/web/src/lib/repos/writingSessions.ts`) track one row per continuous editing visit, separate from the
+daily word-count baseline (`daily_progress` is per-calendar-day; a session is per-visit — "you wrote for 22
+minutes and added 340 words just now"). Start is lazy, wired into `ManuscriptPage`'s existing `onUpdate`
+handler — a session begins on the first real edit, not merely on opening the manuscript page, so browsing
+without writing never creates an empty session. End is best-effort: `visibilitychange` to `hidden` (tab
+switched away or closed) or component unmount (navigating to another page within the app), whichever comes
+first. Deliberately not tied to scene/chapter switches within the same visit — those stay part of the same
+continuous session, which matches how a real writing session feels.
+
+One limitation accepted rather than engineered around: a hard crash, force-quit, or killed tab with no
+`visibilitychange` event leaves a session with `endedAt: null` forever. A heartbeat-write scheme (periodically
+touching the row to prove liveness) would close that gap but directly conflicts with the "never wire a DB
+write to every keystroke" rule in spirit — trading a cosmetic annoyance (one orphaned row, never shown since
+`listRecentSessions` filters to `endedAt !== null`) for exactly the write-amplification pattern that rule
+exists to prevent isn't a good trade. Documented in the code and here rather than silently shipped as solved.
+
+A small "Recent Sessions" card on the Timeline & Goals page (last 5, date/duration/word delta) is the only UI
+surface for now — no session-editing, no deletion, no pace analytics. Verified with a real Playwright browser
+run (not part of the committed suite): wrote a scene, navigated to Timeline, confirmed a session with a
+duration and a "+N words" delta actually appeared.
+
 ### 2026-09-18 — Suggested appearances: a rule-based scan instead of the originally-envisioned AI job
 `docs/IMPLEMENTATION_STATUS.md` had flagged "AI-suggested appearances" as not built, framed as needing "an AI
 Assistant `scene_analysis`-adjacent job." Building that would mean either a background job (rejected outright —
