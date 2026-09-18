@@ -80,6 +80,51 @@ async function expectRejected(fn: () => Promise<unknown>, message: string) {
   throw new Error(message);
 }
 
+/**
+ * Generic cross-user isolation proof for a project- or user-scoped table that follows the
+ * standard "user_owns_project(project_id)" (or equivalent user_id = auth.uid()) policy shape:
+ * user A creates a row, then user B is proven unable to select, update, or delete it, and
+ * finally user A's row is confirmed unchanged. Covers the mechanical majority of tables so each
+ * one doesn't need its own hand-written 20-line test — see docs/DECISIONS.md (2026-09-18) for why
+ * this was worth doing at all: CLAUDE.md requires every project-scoped table to actually be
+ * tested here, not just asserted as RLS-protected in a migration comment.
+ */
+async function testTableIsolation(
+  client: Client,
+  userA: string,
+  userB: string,
+  label: string,
+  table: string,
+  insertColumns: string,
+  insertValues: string,
+  opts: { update?: string; hasDelete?: boolean } = {},
+) {
+  let rowId = "";
+  await test(`user A can create a ${label}`, async () => {
+    await asUser(client, userA);
+    const r = await client.query(`insert into public.${table} (${insertColumns}) values (${insertValues}) returning id`);
+    rowId = r.rows[0].id;
+    assert(!!rowId, `expected ${table} insert to return an id`);
+  });
+
+  await test(`user B cannot see, update, or delete user A's ${label}`, async () => {
+    await asUser(client, userB);
+    const sel = await client.query(`select id from public.${table} where id = '${rowId}'`);
+    assert(sel.rowCount === 0, `${table} leaked across users via SELECT`);
+    if (opts.update) {
+      const upd = await client.query(`update public.${table} set ${opts.update} where id = '${rowId}'`);
+      assert(upd.rowCount === 0, `expected 0 rows updated on ${table}, got ${upd.rowCount}`);
+    }
+    if (opts.hasDelete) {
+      const del = await client.query(`delete from public.${table} where id = '${rowId}'`);
+      assert(del.rowCount === 0, `expected 0 rows deleted on ${table}, got ${del.rowCount}`);
+    }
+    await asUser(client, userA);
+    const stillThere = await client.query(`select id from public.${table} where id = '${rowId}'`);
+    assert(stillThere.rowCount === 1, `${table} row must still exist, unchanged, for user A`);
+  });
+}
+
 function startContainer() {
   if (BACKEND === "local") {
     console.log(`Using local Postgres server, database "${LOCAL_DB_NAME}"…`);
@@ -174,6 +219,7 @@ async function main() {
     let chapterAId = "";
     let sceneAId = "";
     let entryAId = "";
+    let entryA2Id = "";
     let appearanceAId = "";
 
     await test("user A can create a series, project, chapter, scene, and story-bible entry", async () => {
@@ -244,6 +290,40 @@ async function main() {
       const stillThere = await client!.query(`select confirmed from public.appearances where id = '${appearanceAId}'`);
       assert(stillThere.rowCount === 1 && stillThere.rows[0].confirmed === true, "appearance must be unchanged and still owned by user A");
     });
+
+    await test("user A can create a second story-bible entry (for relationship tests)", async () => {
+      await asUser(client!, userA);
+      const entry2 = await client!.query(
+        `insert into public.story_bible_entries (project_id, entry_type, name) values ('${projectAId}', 'character', 'Corvin Ash') returning id`,
+      );
+      entryA2Id = entry2.rows[0].id;
+      assert(!!entryA2Id, "expected second story-bible entry insert to return an id");
+    });
+
+    // The remaining project-/user-scoped tables all follow the same "user_owns_project(project_id)"
+    // (or user_id = auth.uid()) shape as appearances above; testTableIsolation proves each one rather
+    // than trusting the migration comment that says it's RLS-protected. See docs/DECISIONS.md.
+    await testTableIsolation(client!, userA, userB, "canon fact", "canon_facts", "project_id, statement", `'${projectAId}', 'Isolde has black eyes'`, { update: "statement = 'Hijacked'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "custom field definition", "custom_field_defs", "project_id, entry_type, label", `'${projectAId}', 'character', 'Eye color'`, { update: "label = 'Hijacked'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "story thread", "story_threads", "project_id, title", `'${projectAId}', 'The missing crown'`, { update: "title = 'Hijacked'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "storyboard card", "storyboard_cards", "project_id, title", `'${projectAId}', 'Opening card'`, { update: "title = 'Hijacked'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "timeline event", "timeline_events", "project_id, label", `'${projectAId}', 'The ravens arrive'`, { update: "label = 'Hijacked'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "goal", "goals", "project_id, kind, target_words", `'${projectAId}', 'daily', 500`, { update: "target_words = 999999", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "media asset", "media_assets", "project_id, kind, provider, prompt_used", `'${projectAId}', 'character_portrait', 'test-provider', 'A raven-haired sorceress'`, { update: "prompt_used = 'Hijacked'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "part", "parts", "project_id, title", `'${projectAId}', 'Part One'`, { update: "title = 'Hijacked'", hasDelete: true });
+    await testTableIsolation(
+      client!, userA, userB, "relationship", "relationships",
+      "project_id, from_entry_id, to_entry_id, relationship_type",
+      `'${projectAId}', '${entryAId}', '${entryA2Id}', 'rivals'`,
+      { update: "relationship_type = 'Hijacked'", hasDelete: true },
+    );
+    await testTableIsolation(client!, userA, userB, "named snapshot", "named_snapshots", "project_id, name, storage_path", `'${projectAId}', 'Before revision pass', 'snapshots/test.zip'`, { hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "document revision", "document_revisions", "scene_id, project_id, revision, content", `'${sceneAId}', '${projectAId}', 999, '{}'::jsonb`);
+    await testTableIsolation(client!, userA, userB, "writing session", "writing_sessions", "project_id, user_id, words_start", `'${projectAId}', '${userA}', 0`, { update: "words_end = 500", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "daily progress row", "daily_progress", "project_id, user_id, progress_date, words_written", `'${projectAId}', '${userA}', '2026-09-18', 400`, { update: "words_written = 999", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "export job", "export_jobs", "project_id, format", `'${projectAId}', 'epub'`, { update: "status = 'failed'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "import job", "import_jobs", "project_id, user_id, source, original_filename", `'${projectAId}', '${userA}', 'txt', 'manuscript.txt'`, { update: "status = 'failed'", hasDelete: true });
+    await testTableIsolation(client!, userA, userB, "integration connection", "integration_connections", "user_id, provider", `'${userA}', 'google_drive'`, { update: "status = 'error'", hasDelete: true });
 
     await test("user B's UPDATE against user A's project affects 0 rows (not an error, a silent no-op — verify explicitly)", async () => {
       await asUser(client!, userB);
@@ -365,6 +445,49 @@ async function main() {
         () => client!.query(`insert into public.ai_rate_limit_events (user_id) values ('${userA}')`),
         "expected a direct client insert into ai_rate_limit_events to be rejected — it has no policies at all",
       );
+    });
+
+    await test("ai_usage rows are server-written only, but the owning user can read their own", async () => {
+      await asUser(client!, userA);
+      await expectRejected(
+        () => client!.query(`insert into public.ai_usage (user_id, project_id, period_month) values ('${userA}', '${projectAId}', '2026-09')`),
+        "expected a direct client insert into ai_usage to be rejected — usage is server-written only",
+      );
+
+      await asSuperuser(client!); // written only by the Edge Function's service-role client
+      await client!.query(`insert into public.ai_usage (user_id, project_id, period_month) values ('${userA}', '${projectAId}', '2026-09')`);
+
+      await asUser(client!, userA);
+      const ownRows = await client!.query(`select id from public.ai_usage where user_id = '${userA}' and period_month = '2026-09'`);
+      assert(ownRows.rowCount === 1, "the owning user should be able to read their own usage row");
+
+      await asUser(client!, userB);
+      const othersRows = await client!.query(`select id from public.ai_usage where user_id = '${userA}' and period_month = '2026-09'`);
+      assert(othersRows.rowCount === 0, "ai_usage leaked across users");
+    });
+
+    await test("generation_jobs rows are server-written only, but the owning project's user can read them", async () => {
+      await asSuperuser(client!); // media_assets/generation_jobs are both written by the service role's media-generate function
+      const asset = await client!.query(
+        `insert into public.media_assets (project_id, kind, provider, prompt_used) values ('${projectAId}', 'character_portrait', 'test-provider', 'A raven-haired sorceress') returning id`,
+      );
+      const mediaAssetAId = asset.rows[0].id;
+      const job = await client!.query(
+        `insert into public.generation_jobs (project_id, media_asset_id, provider) values ('${projectAId}', '${mediaAssetAId}', 'test-provider') returning id`,
+      );
+      const generationJobAId = job.rows[0].id;
+
+      await asUser(client!, userA);
+      await expectRejected(
+        () => client!.query(`insert into public.generation_jobs (project_id, media_asset_id, provider) values ('${projectAId}', '${mediaAssetAId}', 'test-provider')`),
+        "expected a direct client insert into generation_jobs to be rejected — it is server-written only",
+      );
+      const ownRows = await client!.query(`select id from public.generation_jobs where id = '${generationJobAId}'`);
+      assert(ownRows.rowCount === 1, "the owning project's user should be able to read a generation job created for them");
+
+      await asUser(client!, userB);
+      const othersRows = await client!.query(`select id from public.generation_jobs where id = '${generationJobAId}'`);
+      assert(othersRows.rowCount === 0, "generation_jobs leaked across users");
     });
 
     await test("a client cannot grant itself a paid entitlement", async () => {
