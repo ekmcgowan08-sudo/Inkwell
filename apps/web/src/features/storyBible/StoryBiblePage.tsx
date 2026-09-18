@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Check, Plus, ScanSearch, Search, Trash2, X } from "lucide-react";
 import type { CharacterFields, StoryBibleEntry } from "@inkwell/shared-types";
 import { useProjectContext } from "../project/ProjectLayout";
 import { useAuth } from "../../lib/auth";
@@ -13,11 +13,13 @@ import {
   updateCharacterField,
   updateEntry,
 } from "../../lib/repos/storyBible";
+import { confirmAppearance, detectAppearances, dismissAppearance } from "../../lib/repos/appearances";
 import { Button, IconButton } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/Feedback";
 import { TextAreaField, SelectField } from "../../components/ui/FormControls";
 import { ConfirmDialog } from "../../components/ui/Dialog";
 import { Badge } from "../../components/ui/Feedback";
+import { useToast } from "../../components/ui/Toast";
 import { RelationshipMap } from "./RelationshipMap";
 import "../../styles/storyBible.css";
 
@@ -59,6 +61,8 @@ export function StoryBiblePage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newRelType, setNewRelType] = useState("");
   const [newRelTarget, setNewRelTarget] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const { show } = useToast();
 
   const entries = useLiveQuery(
     () => db.storyBibleEntries.where("projectId").equals(project.id).and((e) => !e.deletedAt && e.entryType === activeType).toArray(),
@@ -72,6 +76,9 @@ export function StoryBiblePage() {
 
   const relationships = useLiveQuery(() => db.relationships.where("projectId").equals(project.id).toArray(), [project.id]) ?? [];
 
+  const scenes = useLiveQuery(() => db.scenes.where("projectId").equals(project.id).and((s) => !s.deletedAt).toArray(), [project.id]) ?? [];
+  const appearances = useLiveQuery(() => db.appearances.where("projectId").equals(project.id).toArray(), [project.id]) ?? [];
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return entries;
@@ -80,11 +87,24 @@ export function StoryBiblePage() {
 
   const active = entries.find((e) => e.id === activeId) ?? filtered[0];
   const activeRelationships = active ? relationships.filter((r) => r.fromEntryId === active.id || r.toEntryId === active.id) : [];
+  const activeAppearances = active ? appearances.filter((a) => a.entryId === active.id) : [];
+  const confirmedAppearances = activeAppearances.filter((a) => a.confirmed);
+  const suggestedAppearances = activeAppearances.filter((a) => !a.confirmed);
 
   async function onAdd() {
     const label = TYPES.find((t) => t.key === activeType)!.label.replace(/s$/, "");
     const entry = await createEntry(project.id, activeType, `New ${label}`);
     setActiveId(entry.id);
+  }
+
+  async function onScanForAppearances() {
+    setScanning(true);
+    try {
+      const created = await detectAppearances(project.id);
+      show(created.length === 0 ? "No new appearances found." : `Found ${created.length} new suggested appearance${created.length === 1 ? "" : "s"}.`);
+    } finally {
+      setScanning(false);
+    }
   }
 
   return (
@@ -101,6 +121,9 @@ export function StoryBiblePage() {
           <Search size={14} style={{ position: "absolute", left: 8, top: 11, color: "var(--color-text-secondary)" }} />
           <input className="iw-input" style={{ paddingLeft: 28 }} placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
+        <Button size="sm" variant="secondary" onClick={onScanForAppearances} disabled={scanning} style={{ marginBottom: 12, width: "100%" }}>
+          <ScanSearch size={13} /> {scanning ? "Scanning…" : "Scan manuscript for appearances"}
+        </Button>
         {filtered.map((e) => (
           <button key={e.id} className={`iw-sb-list-item ${e.id === active?.id ? "active" : ""}`} onClick={() => setActiveId(e.id)}>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{e.name}</div>
@@ -237,6 +260,56 @@ export function StoryBiblePage() {
                   Add
                 </Button>
               </div>
+            </section>
+
+            <section style={{ marginTop: 32 }}>
+              <h2 className="iw-display" style={{ fontSize: 18, margin: 0, marginBottom: 12 }}>
+                Appearances
+              </h2>
+
+              {suggestedAppearances.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div className="iw-help-text" style={{ marginBottom: 6 }}>
+                    Suggested from "Scan manuscript for appearances" — not confirmed yet.
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {suggestedAppearances.map((a) => {
+                      const scene = scenes.find((s) => s.id === a.sceneId);
+                      return (
+                        <div key={a.id} className="iw-card" style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span>{scene?.title ?? "Unknown scene"}</span>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <IconButton label="Confirm appearance" onClick={() => confirmAppearance(a.id)}>
+                              <Check size={14} />
+                            </IconButton>
+                            <IconButton label="Dismiss suggestion" onClick={() => dismissAppearance(a.id)}>
+                              <X size={14} />
+                            </IconButton>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {confirmedAppearances.length === 0 ? (
+                <p className="iw-help-text">No confirmed appearances yet.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {confirmedAppearances.map((a) => {
+                    const scene = scenes.find((s) => s.id === a.sceneId);
+                    return (
+                      <div key={a.id} className="iw-card" style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>{scene?.title ?? "Unknown scene"}</span>
+                        <IconButton label="Remove appearance" onClick={() => dismissAppearance(a.id)}>
+                          <Trash2 size={14} />
+                        </IconButton>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </>
         )}

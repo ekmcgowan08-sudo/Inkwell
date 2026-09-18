@@ -4,6 +4,34 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-18 — Suggested appearances: a rule-based scan instead of the originally-envisioned AI job
+`docs/IMPLEMENTATION_STATUS.md` had flagged "AI-suggested appearances" as not built, framed as needing "an AI
+Assistant `scene_analysis`-adjacent job." Building that would mean either a background job (rejected outright —
+see the "findings needs a scheduled job" reversal above, and the standing "no provider request without user
+initiation" rule) or spending AI credits on every manuscript edit just to notice a character's name showed up
+in a scene. Neither was warranted: whether a story-bible entry's name appears in a scene's text is a plain
+string-matching question, not a reasoning one — no model call adds anything a `RegExp` doesn't already answer.
+
+Implemented `detectAppearances` (`apps/web/src/lib/repos/appearances.ts`) as a deterministic, local,
+zero-cost scan matching every entry's name/aliases (whole-word, case-insensitive, names under 3 characters
+skipped to cut noise like matching "Jo" inside "enjoy") against every scene's plain text, creating an
+unconfirmed `ai_suggested` appearance for any (entry, scene) pair not already recorded — mirrors
+`findingsScanner.ts`'s `runLocalConsistencyScan` almost exactly, including being explicitly user-triggered (a
+"Scan manuscript for appearances" button on the Story Bible page) rather than automatic. This also meant
+wiring the `appearances` table into the client for the first time — it had a schema, RLS policies, and a
+Zod type, but no Dexie table, no repo, and no UI existed anywhere before this.
+
+One real gap accepted rather than solved: "dismissing" a suggestion deletes the row, because the schema's
+`confirmed: boolean` has no third "rejected, don't resuggest" state — a dismissed mention can resurface on the
+next scan. Fixing that would mean a schema change (a new migration, RLS re-verification, a new enum value) for
+a minor annoyance in an explicitly opt-in, re-runnable scan; not worth it here. Documented in both the code
+comment and `docs/IMPLEMENTATION_STATUS.md` rather than silently shipped as if solved.
+
+Verified with a real Playwright browser run (not part of the committed suite — a one-off manual check for this
+change): wrote a scene mentioning a name, created a matching character entry, ran the scan, confirmed the
+suggestion appeared and moved into "confirmed" after clicking Confirm. Also unit-tested (`appearances.test.ts`)
+and confirmed the existing smoke/accessibility Playwright specs still pass with the new Story Bible UI.
+
 ### 2026-09-18 — Built the real Terms/Privacy acceptance flow; sourced the document text from docs/legal/ directly rather than copying it
 `docs/IMPLEMENTATION_STATUS.md` had flagged this honestly: the schema had `profiles.terms_accepted_at`/
 `privacy_accepted_at`, but signup only showed a plain-text "by continuing you agree..." sentence that wrote

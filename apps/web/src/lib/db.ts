@@ -3,6 +3,7 @@ import type {
   AIConversation,
   AIFinding,
   AIMessage,
+  Appearance,
   Chapter,
   DailyProgress,
   DeletedItem,
@@ -76,6 +77,7 @@ class InkwellDB extends Dexie {
   scenes!: Table<Scene, string>;
   storyBibleEntries!: Table<StoryBibleEntry, string>;
   relationships!: Table<Relationship, string>;
+  appearances!: Table<Appearance, string>;
   storyThreads!: Table<StoryThread, string>;
   storyboardCards!: Table<StoryboardCard, string>;
   timelineEvents!: Table<TimelineEvent, string>;
@@ -103,6 +105,7 @@ class InkwellDB extends Dexie {
       scenes: "id, projectId, chapterId, sortOrder",
       storyBibleEntries: "id, projectId, entryType",
       relationships: "id, projectId, fromEntryId, toEntryId",
+      appearances: "id, projectId, entryId, sceneId, confirmed, &[entryId+sceneId]",
       storyThreads: "id, projectId",
       storyboardCards: "id, projectId, column, sortOrder",
       timelineEvents: "id, projectId, sortOrder",
