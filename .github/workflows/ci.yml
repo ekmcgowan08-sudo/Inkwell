@@ -34,6 +34,7 @@ jobs:
       - name: Unit tests
         run: |
           pnpm --filter @inkwell/shared-types test
+          pnpm --filter @inkwell/ai-contracts test
           pnpm --filter @inkwell/web test
 
       - name: Format check

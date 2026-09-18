@@ -18,7 +18,12 @@ export function createTestProvider(): LLMProvider {
       const scenario = scenarioMatch?.[1];
 
       let text: string;
-      if (scenario === "contradiction") {
+      if (scenario === "findings") {
+        text =
+          'Based on the provided context, there is a possible contradiction worth tracking. [test-provider deterministic response]\n\n===FINDINGS_JSON===\n[{"findingType":"contradiction","severity":"medium","confidence":0.75,"title":"Possible contradiction found by the test provider","explanation":"A deterministic test finding, not real model reasoning."}]\n===END_FINDINGS_JSON===';
+      } else if (scenario === "findings-empty") {
+        text = "Nothing concrete enough to track was found. [test-provider deterministic response]\n\n===FINDINGS_JSON===\n[]\n===END_FINDINGS_JSON===";
+      } else if (scenario === "contradiction") {
         text =
           "Based on the provided context, there is a possible contradiction: the same detail is described two different ways in the material supplied. [test-provider deterministic response]";
       } else if (scenario === "not-established") {

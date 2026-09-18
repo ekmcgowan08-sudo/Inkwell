@@ -25,19 +25,29 @@ time and this document can't stay current with that.
    (`createUserClient`, `_shared/supabaseClients.ts`), not by trusting the `projectId` in the request body. RLS
    makes a project you don't own behave exactly like a project that doesn't exist — the function can't
    distinguish the two, which is the point (no existence-leak).
-6. It checks a monthly token allowance (`entitlements.ai_monthly_token_allowance` vs. summed `ai_usage` for the
+5. It checks a monthly token allowance (`entitlements.ai_monthly_token_allowance` vs. summed `ai_usage` for the
    current `YYYY-MM`) before doing anything that costs money.
-7. It builds a **bounded** context (`_shared/buildContext.ts`) — never the full manuscript. See "Context
+6. It builds a **bounded** context (`_shared/buildContext.ts`) — never the full manuscript. See "Context
    budgeting" below.
-8. It builds the system prompt (`packages/ai-contracts/src/promptBuilder.ts`) — one shared function, so the
+7. It builds the system prompt (`packages/ai-contracts/src/promptBuilder.ts`) — one shared function, so the
    Edge Function and the web app's local-only mode produce the same style of prompt.
-9. It calls the provider (real Anthropic, or the deterministic test provider if `ANTHROPIC_API_KEY` is unset —
+8. It calls the provider (real Anthropic, or the deterministic test provider if `ANTHROPIC_API_KEY` is unset —
    this fallback exists so a Supabase project without AI credentials configured still returns *something*
    instead of a hard failure, clearly logged as a fallback).
-10. It parses bracketed citations out of the response (`parseCitations`), persists both the user's question and
-    the assistant's answer via the **service-role** client (bypassing RLS deliberately — this is the one path
-    allowed to write `ai_messages`, see `docs/DATA_MODEL.md` "server-only write paths"), updates `ai_usage`, and
-    returns the answer with citations, a context summary, and a groundedness label.
+9. It strips any trailing findings block from the response (`extractFindings`, see "AI Findings vs. the AI
+   Assistant's consistency-check mode" below), parses bracketed citations out of what's left
+   (`parseCitations`), persists both the user's question and the assistant's answer via the **service-role**
+   client (bypassing RLS deliberately — this is the one path allowed to write `ai_messages`, see
+   `docs/DATA_MODEL.md` "server-only write paths"), persists any extracted findings the same way, updates
+   `ai_usage`, and returns the answer with citations, a context summary, a groundedness label, and any
+   findings created.
+10. **The client mirrors that response into its local Dexie cache** — the conversation record, both
+    messages, and any findings — the same shape `askAssistantLocal` writes for local-only mode, just sourced
+    from the server's response instead of a local provider call (`askAssistantCloud`,
+    `apps/web/src/lib/aiClient.ts`). Every page that shows AI Assistant output reads from Dexie via
+    `useLiveQuery`, never live from Postgres, so without this mirroring step a cloud-connected author would
+    get billed for a request and see nothing change in the UI — a real bug this pass found and fixed, see
+    `docs/DECISIONS.md` (2026-09-18).
 
 ## Context budgeting ("never send the whole manuscript")
 
@@ -153,17 +163,45 @@ one used in automated tests.
 
 ## AI Findings vs. the AI Assistant's consistency-check mode
 
-Two different mechanisms, both real:
+Two different mechanisms, both real, and now both feed the same `ai_findings` table:
 
 1. **Rule-based scanner** (`apps/web/src/lib/findingsScanner.ts`, run via the "Run consistency scan" button):
    duplicate story-bible names, open story threads with no linked scene, same-day/different-location timeline
    conflicts. Zero AI cost, deterministic, works with no backend at all.
 2. **AI Assistant's `consistency_check` (and related) modes**: a real model call that reasons over the prose
    itself in ways the rules above structurally cannot (e.g., "this character's eye color contradicts chapter
-   4"). This is a conversation the author has to actively start — nothing yet automatically converts an AI
-   Assistant answer into a persisted `ai_findings` row in the background. That would require a scheduled job
-   (e.g., a `pg_cron`-triggered Edge Function invocation) and is a concrete, well-scoped next step, not
-   something silently missing without a plan.
+   4"). This is still a conversation the author has to actively start — no background job, no unprompted
+   model call — but the answer from that one request is now automatically converted into `ai_findings` rows,
+   not left stranded in the chat transcript.
+
+   For the modes where this is plausible (`FINDINGS_ELIGIBLE_MODES` in `promptBuilder.ts`:
+   `consistency_check`, `character_continuity`, `timeline_analysis`, `plot_thread_tracking`,
+   `dropped_thread_detection`, `canon_extraction` — not e.g. `brainstorming` or `pacing_feedback`, where a
+   structured finding doesn't make sense), the system prompt asks the model to append a delimited JSON block
+   after its normal answer:
+
+   ```
+   ===FINDINGS_JSON===
+   [{"findingType": "...", "severity": "...", "confidence": 0.0-1.0, "title": "...", "explanation": "... [scene:id] ..."}]
+   ===END_FINDINGS_JSON===
+   ```
+
+   `extractFindings` (`packages/ai-contracts/src/findingsExtraction.ts`, shared by the Edge Function and the
+   local-only path) strips this block from the text before it's ever stored as `ai_messages.content` or shown
+   to the author, and validates the JSON against the same finding shape the rule-based scanner uses. A
+   missing or malformed block is treated as zero findings, never as an error — the conversational answer is
+   unaffected either way. Each finding's `evidence` is resolved the same way message citations already are:
+   `parseCitations` runs over the finding's own `explanation` text, so a finding citing `[scene:id]` gets a
+   real, clickable citation, not a free-text reference. **Verified: Auto** —
+   `packages/ai-contracts/src/findingsExtraction.test.ts` (block stripping, valid/empty/malformed JSON) and
+   `apps/web/src/lib/aiClient.test.ts` (the full local-only pipeline end to end, via the deterministic test
+   provider's `TEST_SCENARIO:findings` / `TEST_SCENARIO:findings-empty`, including that a mode outside
+   `FINDINGS_ELIGIBLE_MODES` never produces findings); `apps/web/src/lib/aiClientCloud.test.ts` (the cloud
+   path, mocking `supabase.functions.invoke` — asserts the client correctly mirrors a server response
+   carrying findings into Dexie); the Edge Function's own `.insert()` call is the same already-tested
+   `extractFindings`/`parseCitations` logic wired to `serviceClient`, not separately integration-tested
+   against a live Postgres in this pass — RLS around `ai_findings` (a client can't insert directly, but can
+   update `status`/`author_note` on their own project's findings) is proven in `tests/rls/run.ts`.
 
 ## Deterministic test provider
 

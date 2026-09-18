@@ -1,5 +1,6 @@
 export * from "./citations.ts";
 export * from "./contracts.ts";
+export * from "./findingsExtraction.ts";
 export * from "./pricing.ts";
 export * from "./promptBuilder.ts";
 export * from "./providers/testProvider.ts";

@@ -14,6 +14,7 @@ import {
   buildSystemPrompt,
   createTestProvider,
   estimateCostUsdMicros,
+  extractFindings,
   inferGroundedness,
   parseCitations,
   summarizeContext,
@@ -21,6 +22,7 @@ import {
   type LLMProvider,
 } from "@inkwell/ai-contracts";
 import { createAnthropicProvider, DEFAULT_ANTHROPIC_MODEL } from "@inkwell/ai-contracts/providers/anthropicProvider";
+import { toCamelRow, type AIFinding } from "@inkwell/shared-types";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabaseClients.ts";
 import { buildContextFromSupabase } from "../_shared/buildContext.ts";
@@ -137,7 +139,13 @@ async function handleRequest(req: Request): Promise<Response> {
     const provider = selectProvider();
     const completion = await provider.complete({ system, user: question, maxTokens: 1024 });
 
-    const citations = parseCitations(completion.text, ctx);
+    // Strip any trailing findings block (see promptBuilder.ts's FINDINGS_ELIGIBLE_MODES) before
+    // this ever becomes citations, groundedness input, or visible chat content — the author must
+    // never see raw JSON in the transcript. See docs/AI_ARCHITECTURE.md "AI Findings vs. the AI
+    // Assistant's consistency-check mode".
+    const { text: answerText, findings: extractedFindings } = extractFindings(completion.text);
+
+    const citations = parseCitations(answerText, ctx);
     const groundedness = inferGroundedness(ctx);
     const contextSummary = summarizeContext(ctx);
 
@@ -157,7 +165,7 @@ async function handleRequest(req: Request): Promise<Response> {
         project_id: projectId,
         role: "assistant",
         mode,
-        content: completion.text,
+        content: answerText,
         citations,
         context_summary: contextSummary,
         groundedness,
@@ -167,6 +175,30 @@ async function handleRequest(req: Request): Promise<Response> {
       .select("id")
       .single();
     if (assistantMsgError || !assistantMessage) throw new AssistantError("provider_error", assistantMsgError?.message ?? "Failed to save response.");
+
+    // Sent back to the client (below) so it can mirror these into its local cache — the Findings
+    // workspace reads from IndexedDB, not a live query against Postgres, same reasoning as
+    // mirroring the conversation/message.
+    let savedFindings: AIFinding[] = [];
+    if (extractedFindings.length > 0) {
+      const { data: insertedFindings, error: findingsError } = await serviceClient
+        .from("ai_findings")
+        .insert(
+          extractedFindings.map((f) => ({
+            project_id: projectId,
+            finding_type: f.findingType,
+            severity: f.severity,
+            confidence: f.confidence,
+            title: f.title,
+            explanation: f.explanation,
+            evidence: parseCitations(f.explanation, ctx),
+          })),
+        )
+        .select("*");
+      // A failure here shouldn't fail the whole request — the author already has their answer.
+      if (findingsError) console.error("Failed to persist AI-derived findings:", findingsError.message);
+      else savedFindings = (insertedFindings ?? []).map((row) => toCamelRow<AIFinding>(row));
+    }
 
     const model = Deno.env.get("ANTHROPIC_MODEL") || DEFAULT_ANTHROPIC_MODEL;
     const costMicros = estimateCostUsdMicros(model, completion.usage.tokensInput, completion.usage.tokensOutput);
@@ -188,10 +220,11 @@ async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({
       conversationId: resolvedConversationId,
       messageId: assistantMessage.id,
-      content: completion.text,
+      content: answerText,
       citations,
       contextSummary,
       groundedness,
+      findings: savedFindings,
       usage: {
         tokensInput: completion.usage.tokensInput,
         tokensOutput: completion.usage.tokensOutput,

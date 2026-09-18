@@ -41,8 +41,11 @@ for the full current-state detail behind each item.
   book has a series) sets `seriesScope: true`; the context builder then pulls a small, book-labeled,
   separately-bounded slice of chapters/canon facts/story bible entries from up to 4 sibling books, both
   server-side and in local-only mode. Off by default. Unit-tested; not exercised against a live project.
-- Automated conversion of AI Assistant consistency-check answers into persisted `ai_findings` (needs a
-  scheduled job).
+- ~~Automated conversion of AI Assistant consistency-check answers into persisted `ai_findings`~~ **Done.**
+  Turned out not to need a scheduled job — it's post-processing of a response the author's own request
+  already produced. The system prompt asks eligible modes for a trailing JSON block; `extractFindings`
+  strips and validates it, persisting real findings with resolved citations. See `docs/DECISIONS.md`
+  (2026-09-18 entry) for why the original "needs a scheduled job" framing was wrong.
 - ~~Sliding-window AI rate limiting beyond the current monthly-allowance check.~~ **Done.**
   `checkAndRecordRateLimit` (8 requests/60s per user, backed by a server-only `ai_rate_limit_events` table —
   zero RLS policies, proven unreadable/unwritable by any client) runs before anything else in the Edge

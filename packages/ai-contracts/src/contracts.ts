@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { aiModeSchema, citationSchema, uuidSchema } from "@inkwell/shared-types";
+import { aiFindingSchema, aiModeSchema, citationSchema, uuidSchema } from "@inkwell/shared-types";
 
 /** Request body for the `ai-assistant` Edge Function. Validated server-side before any provider call. */
 export const assistantRequestSchema = z.object({
@@ -19,6 +19,11 @@ export const assistantResponseSchema = z.object({
   citations: z.array(citationSchema),
   contextSummary: z.array(z.string()),
   groundedness: z.enum(["established", "inference", "not_established", "mixed"]),
+  /** Any findings the response's FINDINGS_JSON block (see findingsExtraction.ts) resolved into
+   * real, persisted ai_findings rows — sent back so the client can mirror them into its local
+   * cache the same way it mirrors the conversation/message, since the Findings workspace reads
+   * from the local store, not a live query against Postgres. */
+  findings: z.array(aiFindingSchema).default([]),
   usage: z.object({
     tokensInput: z.number().int().nonnegative(),
     tokensOutput: z.number().int().nonnegative(),

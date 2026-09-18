@@ -1,8 +1,26 @@
 import type { ContextBundle } from "./contracts.ts";
+import { FINDINGS_BLOCK_END, FINDINGS_BLOCK_START } from "./findingsExtraction.ts";
 import type { z } from "zod";
 import type { aiModeSchema } from "@inkwell/shared-types";
 
 type AIMode = z.infer<typeof aiModeSchema>;
+
+/**
+ * Modes where the model plausibly surfaces concrete, trackable issues — as opposed to prose
+ * feedback (pacing, structure), free-form brainstorming, or a plain answer. Only these get the
+ * trailing findings-block instruction, so `extractFindings` (see `findingsExtraction.ts`) has
+ * something meaningful to parse and the Edge Function knows when it's worth persisting
+ * `ai_findings` rows automatically. See docs/AI_ARCHITECTURE.md "AI Findings vs. the AI
+ * Assistant's consistency-check mode".
+ */
+export const FINDINGS_ELIGIBLE_MODES = new Set<AIMode>([
+  "consistency_check",
+  "character_continuity",
+  "timeline_analysis",
+  "plot_thread_tracking",
+  "dropped_thread_detection",
+  "canon_extraction",
+]);
 
 const MODE_INSTRUCTIONS: Record<AIMode, string> = {
   ask: "Answer the author's question directly, grounded only in the provided context.",
@@ -87,6 +105,19 @@ export function buildSystemPrompt(mode: AIMode, ctx: ContextBundle): string {
   lines.push(
     "Keep answers focused and under 200 words unless the author asks for more detail. When you make a claim, prefer citing a specific bracketed id shown above so the UI can render it as a clickable citation.",
   );
+
+  if (FINDINGS_ELIGIBLE_MODES.has(mode)) {
+    lines.push(
+      "",
+      "After your answer, if you identified any concrete, specific issues worth tracking (not vague impressions), list each one in this exact format so they can be saved automatically:",
+      "",
+      FINDINGS_BLOCK_START,
+      '[{"findingType": "contradiction|character_inconsistency|timeline_conflict|geographic_conflict|dropped_thread|unresolved_setup|repeated_information|pacing_observation|possible_canon_fact", "severity": "low|medium|high", "confidence": 0.0-1.0, "title": "short specific title", "explanation": "one or two sentences, citing a bracketed id like [scene:id] wherever possible"}]',
+      FINDINGS_BLOCK_END,
+      "",
+      `If you found nothing concrete enough to track, still include the block with an empty array: ${FINDINGS_BLOCK_START}[]${FINDINGS_BLOCK_END}. Never fabricate a finding just to fill this block, and never omit the block entirely for this task.`,
+    );
+  }
 
   return lines.join("\n");
 }

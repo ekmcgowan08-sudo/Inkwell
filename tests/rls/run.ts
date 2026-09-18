@@ -305,6 +305,31 @@ async function main() {
       );
     });
 
+    await test("a client cannot insert AI findings directly, but the owning user can update status/author_note on one the server created", async () => {
+      await asUser(client!, userA);
+      await expectRejected(
+        () =>
+          client!.query(
+            `insert into public.ai_findings (project_id, finding_type, severity, confidence, title, explanation) values ('${projectAId}', 'contradiction', 'medium', 0.8, 'Fabricated finding', 'A client should not be able to create this row directly.')`,
+          ),
+        "expected direct client insert into ai_findings to be rejected — findings are server-created only",
+      );
+
+      await asSuperuser(client!); // the Edge Function's service-role client is the only real writer
+      const created = await client!.query(
+        `insert into public.ai_findings (project_id, finding_type, severity, confidence, title, explanation) values ('${projectAId}', 'contradiction', 'medium', 0.8, 'Real finding', 'Created as the service role would.') returning id`,
+      );
+      const findingAId = created.rows[0].id;
+
+      await asUser(client!, userA);
+      const updated = await client!.query(`update public.ai_findings set status = 'dismissed', author_note = 'not a real issue' where id = '${findingAId}'`);
+      assert(updated.rowCount === 1, "the owning user should be able to update status/author_note on a finding in their own project");
+
+      await asUser(client!, userB);
+      const otherUsersUpdate = await client!.query(`update public.ai_findings set status = 'dismissed' where id = '${findingAId}'`);
+      assert(otherUsersUpdate.rowCount === 0, "a finding in another user's project must not be updatable");
+    });
+
     await test("ai_rate_limit_events is entirely server-only — no client can read or write it, even their own rows", async () => {
       await asSuperuser(client!); // written only by the Edge Function's service-role client
       await client!.query(`insert into public.ai_rate_limit_events (user_id) values ('${userA}')`);

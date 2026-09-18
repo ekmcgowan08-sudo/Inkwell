@@ -1,12 +1,13 @@
 import {
   buildSystemPrompt,
   createTestProvider,
+  extractFindings,
   inferGroundedness,
   parseCitations,
   summarizeContext,
   type AssistantResponse,
 } from "@inkwell/ai-contracts";
-import type { AIMode, Citation } from "@inkwell/shared-types";
+import type { AIFinding, AIMode, Citation } from "@inkwell/shared-types";
 import { db, nowIso } from "./db";
 import { buildLocalContext } from "./aiLocalContext";
 import { isLocalOnlyMode } from "./env";
@@ -44,7 +45,12 @@ async function askAssistantLocal(
     createdAt: now,
   });
 
-  const citations = parseCitations(completion.text, ctx);
+  // Strip any trailing findings block (see promptBuilder.ts's FINDINGS_ELIGIBLE_MODES) before it
+  // ever becomes citations, groundedness input, or visible chat content — same handling as the
+  // server-side path in supabase/functions/ai-assistant/index.ts.
+  const { text: answerText, findings: extractedFindings } = extractFindings(completion.text);
+
+  const citations = parseCitations(answerText, ctx);
   const groundedness = inferGroundedness(ctx);
   const contextSummary = summarizeContext(ctx);
 
@@ -53,7 +59,7 @@ async function askAssistantLocal(
     conversationId: convoId,
     role: "assistant",
     mode,
-    content: completion.text,
+    content: answerText,
     citations,
     contextSummary,
     isEstablishedVsInference: groundedness,
@@ -62,16 +68,44 @@ async function askAssistantLocal(
     createdAt: nowIso(),
   });
 
+  if (extractedFindings.length > 0) {
+    const findingsNow = nowIso();
+    await db.aiFindings.bulkPut(
+      extractedFindings.map((f) => ({
+        id: crypto.randomUUID(),
+        projectId,
+        findingType: f.findingType,
+        severity: f.severity,
+        confidence: f.confidence,
+        title: f.title,
+        explanation: f.explanation,
+        evidence: parseCitations(f.explanation, ctx),
+        status: "open" as const,
+        authorNote: null,
+        snoozedUntil: null,
+        createdAt: findingsNow,
+        updatedAt: findingsNow,
+      })),
+    );
+  }
+
   return {
     conversationId: convoId,
-    content: completion.text,
+    content: answerText,
     citations,
     contextSummary,
     groundedness,
   };
 }
 
-async function askAssistantCloud(projectId: string, mode: AIMode, question: string, conversationId: string | null, seriesScope: boolean) {
+async function askAssistantCloud(
+  projectId: string,
+  userId: string,
+  mode: AIMode,
+  question: string,
+  conversationId: string | null,
+  seriesScope: boolean,
+) {
   const supabase = getSupabase()!;
   const {
     data: { session },
@@ -85,13 +119,63 @@ async function askAssistantCloud(projectId: string, mode: AIMode, question: stri
     body: { projectId, mode, question, conversationId, seriesScope },
   });
   if (error) throw new Error(error.message ?? "The AI assistant is unavailable right now.");
-  return data as {
+  const result = data as {
     conversationId: string;
+    messageId: string;
     content: string;
     citations: Citation[];
     contextSummary: string[];
     groundedness: AssistantResponse["groundedness"];
+    findings: AIFinding[];
+    usage: AssistantResponse["usage"];
   };
+
+  // The Edge Function is the source of truth (it wrote all of this to Postgres via the
+  // service-role client already) — this mirrors that response into the local Dexie cache, the
+  // same store every other page (AIAssistantPage's message list, FindingsPage) actually reads
+  // from. Without this, a cloud-connected author would get a real answer back but see nothing
+  // change in the chat or Findings workspace, since neither reads live from Postgres.
+  const now = nowIso();
+  if (!conversationId) {
+    await db.aiConversations.put({
+      id: result.conversationId,
+      projectId,
+      userId,
+      scope: "project",
+      title: question.slice(0, 60),
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  await db.aiMessages.put({
+    id: crypto.randomUUID(),
+    conversationId: result.conversationId,
+    role: "user",
+    mode,
+    content: question,
+    citations: [],
+    contextSummary: [],
+    isEstablishedVsInference: null,
+    tokensInput: 0,
+    tokensOutput: 0,
+    createdAt: now,
+  });
+  await db.aiMessages.put({
+    id: result.messageId,
+    conversationId: result.conversationId,
+    role: "assistant",
+    mode,
+    content: result.content,
+    citations: result.citations,
+    contextSummary: result.contextSummary,
+    isEstablishedVsInference: result.groundedness,
+    tokensInput: result.usage.tokensInput,
+    tokensOutput: result.usage.tokensOutput,
+    createdAt: nowIso(),
+  });
+  if (result.findings.length > 0) await db.aiFindings.bulkPut(result.findings);
+
+  return result;
 }
 
 export async function askAssistant(
@@ -103,5 +187,5 @@ export async function askAssistant(
   seriesScope = false,
 ) {
   if (isLocalOnlyMode) return askAssistantLocal(projectId, userId, mode, question, conversationId, seriesScope);
-  return askAssistantCloud(projectId, mode, question, conversationId, seriesScope);
+  return askAssistantCloud(projectId, userId, mode, question, conversationId, seriesScope);
 }
