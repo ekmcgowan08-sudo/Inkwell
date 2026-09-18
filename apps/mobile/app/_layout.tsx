@@ -29,6 +29,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="book/[id]/manuscript" options={{ title: "Manuscript" }} />
           <Stack.Screen name="book/[id]/story-bible" options={{ title: "Story Bible" }} />
+          <Stack.Screen name="book/[id]/timeline" options={{ title: "Timeline" }} />
         </Stack>
       </AuthProvider>
     </SafeAreaProvider>

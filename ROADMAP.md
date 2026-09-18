@@ -55,9 +55,9 @@ for the full current-state detail behind each item.
 - Google Drive integration (backup/export/import to a connected Drive folder).
 - Media generation (character portraits, location concepts, cover concepts) — schema and architecture are
   ready; needs a provider decision and UI.
-- Mobile: storyboard, timeline, and AI assistant screens (Library, a plain-text manuscript editor, and now
-  a basic story bible screen exist — see `docs/IMPLEMENTATION_STATUS.md`); an on-device local-first store
-  for offline mobile writing.
+- Mobile: storyboard and AI assistant screens (Library, a plain-text manuscript editor, a story bible
+  screen, and now a timeline screen exist — see `docs/IMPLEMENTATION_STATUS.md`); an on-device local-first
+  store for offline mobile writing.
 - Subscription/entitlement UI and real payment integration (Stripe, Apple IAP, Google Play Billing) — schema
   supports it, nothing is wired to a real payment processor.
 - ~~Automated accessibility scanning (axe-core) in CI.~~ **Done.** `tests/e2e/accessibility.spec.ts`
