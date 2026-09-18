@@ -174,6 +174,7 @@ async function main() {
     let chapterAId = "";
     let sceneAId = "";
     let entryAId = "";
+    let appearanceAId = "";
 
     await test("user A can create a series, project, chapter, scene, and story-bible entry", async () => {
       await asUser(client!, userA);
@@ -220,6 +221,28 @@ async function main() {
       assert(chapters.rowCount === 0, "chapters leaked across users");
       assert(scenes.rowCount === 0, "scenes leaked across users");
       assert(entries.rowCount === 0, "story bible entries leaked across users");
+    });
+
+    await test("user A can record an appearance linking a story-bible entry to a scene", async () => {
+      await asUser(client!, userA);
+      const appearance = await client!.query(
+        `insert into public.appearances (project_id, entry_id, scene_id) values ('${projectAId}', '${entryAId}', '${sceneAId}') returning id`,
+      );
+      appearanceAId = appearance.rows[0].id;
+      assert(!!appearanceAId, "expected appearance insert to return an id");
+    });
+
+    await test("user B cannot see, update, or delete user A's appearance record", async () => {
+      await asUser(client!, userB);
+      const r = await client!.query(`select id from public.appearances where id = '${appearanceAId}'`);
+      assert(r.rowCount === 0, "appearance record leaked across users");
+      const upd = await client!.query(`update public.appearances set confirmed = false where id = '${appearanceAId}'`);
+      assert(upd.rowCount === 0, `expected 0 rows updated, got ${upd.rowCount}`);
+      const del = await client!.query(`delete from public.appearances where id = '${appearanceAId}'`);
+      assert(del.rowCount === 0, `expected 0 rows deleted, got ${del.rowCount}`);
+      await asUser(client!, userA);
+      const stillThere = await client!.query(`select confirmed from public.appearances where id = '${appearanceAId}'`);
+      assert(stillThere.rowCount === 1 && stillThere.rows[0].confirmed === true, "appearance must be unchanged and still owned by user A");
     });
 
     await test("user B's UPDATE against user A's project affects 0 rows (not an error, a silent no-op — verify explicitly)", async () => {

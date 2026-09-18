@@ -4,11 +4,22 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-18 — Found and fixed a real CLAUDE.md hard-rule violation: `appearances` had RLS policies but no isolation test
+CLAUDE.md is explicit: "every project-scoped table needs RLS, and it needs to actually be tested in
+`tests/rls/run.ts`, not just asserted in a comment." Auditing every table against that rule turned up
+`public.appearances` (migration `0005_story_bible.sql`): four real policies (`app_select`/`app_insert`/
+`app_update`/`app_delete`), all scoped via `inkwell.user_owns_project(project_id)`, but zero coverage in
+`tests/rls/run.ts` — the policies had never actually been exercised, only declared. Added two tests: user A
+creates an appearance linking a story-bible entry to a scene, then user B is proven unable to select, update,
+or delete it (0 rows each way), with a final check that user A's row is unchanged. All 18 RLS tests now pass
+(was 16); the doc counts elsewhere in `docs/IMPLEMENTATION_STATUS.md` that had drifted to a stale "13" were
+also corrected to match. This is purely test coverage — no policy or schema changed, since the policies were
+already correct; they were just unproven.
 ### 2026-09-09 — Playwright browser launch pinned to the pre-installed Chromium path
 The sandbox has no writable path for Playwright's own browser download and ships a pre-installed Chromium at `/opt/pw-browsers/chromium`. `tests/e2e/playwright.config.ts` hardcodes `launchOptions.executablePath` to that path (overridable via `PLAYWRIGHT_CHROMIUM_PATH`). On a normal dev machine or CI runner, unset that env var and let Playwright manage its own browser binaries instead — the pinned path is a sandbox accommodation, not a production requirement.
 
 ### 2026-09-09 — RLS test suite supports a local-Postgres fallback backend
-`tests/rls/run.ts` defaults to spinning up a disposable Docker Postgres container (works in CI and normal dev machines). This sandbox has a Docker *client* but no running daemon, so a `RLS_TEST_BACKEND=local` mode was added that uses the system's already-installed `postgresql` service via `pg_ctlcluster`/`psql` against a throwaway database instead. Both paths run the exact same migrations and assertions — only container orchestration differs. All 13 isolation tests pass under the local backend; verify the Docker path too before trusting it blindly in a fresh CI environment.
+`tests/rls/run.ts` defaults to spinning up a disposable Docker Postgres container (works in CI and normal dev machines). This sandbox has a Docker *client* but no running daemon, so a `RLS_TEST_BACKEND=local` mode was added that uses the system's already-installed `postgresql` service via `pg_ctlcluster`/`psql` against a throwaway database instead. Both paths run the exact same migrations and assertions — only container orchestration differs. All 18 isolation tests pass under the local backend; verify the Docker path too before trusting it blindly in a fresh CI environment.
 
 ### 2026-09-09 — Local-only mode as the zero-config default
 Rather than requiring Supabase credentials before the app does anything, `apps/web` detects an unconfigured `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` and runs fully offline: a stable pseudo-user id, IndexedDB-only persistence (Dexie), and the AI assistant backed by the deterministic test provider instead of a real Anthropic call. This satisfies the brief's "documented mock mode when production credentials are unavailable" requirement and made it possible to build and Playwright-verify the entire golden path (dashboard → write → story bible → storyboard → timeline → AI → findings → export) with zero backend running. Trade-off: local-only mode is genuinely single-device — there is no sync, by design, and the UI says so.

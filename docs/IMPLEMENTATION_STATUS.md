@@ -25,7 +25,7 @@ Legend: ✅ done and verified · 🟡 real but partial · ⚪ scaffolded/designe
 
 ## Phase 2 — Auth, database, project isolation, dashboard
 ✅ Full SQL schema, `supabase/migrations/0001`–`0010`, every table RLS-enabled with explicit select/insert/update/delete policies (or deliberately none, for server-only tables — see `docs/DATA_MODEL.md`).
-✅ **16/16 automated RLS isolation tests pass** against real Postgres (`pnpm test:rls`, `RLS_TEST_BACKEND=local` in this sandbox — see `docs/DECISIONS.md`): cross-user project/chapter/scene/story-bible access denied, AI conversations/messages/document_chunks isolated per project+user, the ranked full-text search functions respect RLS, `ai_rate_limit_events` is unreadable/unwritable by any client, `ai_findings` can't be created by a client directly (but the owning user can update status/author_note), a client cannot self-grant a paid entitlement, series-ownership IDOR blocked by a CHECK constraint, soft-delete recovery bin is private. **Verified: Auto.**
+✅ **18/18 automated RLS isolation tests pass** against real Postgres (`pnpm test:rls`, `RLS_TEST_BACKEND=local` in this sandbox — see `docs/DECISIONS.md`): cross-user project/chapter/scene/story-bible access denied, `appearances` records isolated per project+user (added 2026-09-18 — the table had policies but no test, a hard-rule gap), AI conversations/messages/document_chunks isolated per project+user, the ranked full-text search functions respect RLS, `ai_rate_limit_events` is unreadable/unwritable by any client, `ai_findings` can't be created by a client directly (but the owning user can update status/author_note), a client cannot self-grant a paid entitlement, series-ownership IDOR blocked by a CHECK constraint, soft-delete recovery bin is private. **Verified: Auto.**
 ✅ Supabase Auth wiring in `apps/web` (signup/login/logout/password reset/session persistence/protected routes) — code complete, cannot be verified end-to-end without a real Supabase project (**Prod creds** required for that half).
 ✅ Local-only mode (no Supabase configured): stable pseudo-user, full app functionality, zero backend. **Verified: Browser**, including a full Playwright golden-path test (`tests/e2e/smoke.spec.ts`).
 ✅ Dashboard: grid/list views, search, sort (recent/title/progress), favorites, archive, duplicate, soft-delete with recovery, new-book dialog (with series create/select), import dialog (TXT/MD). **Verified: Browser.**
@@ -116,7 +116,7 @@ media-provider interface code, and no payment integration exist yet. Correctly o
 the brief's own phase ordering (media/subscriptions after core product).
 
 ## Phase 11 — Security, accessibility, performance, tests
-✅ RLS/security isolation tests (13/13, see Phase 2) — the load-bearing security evidence for this whole project.
+✅ RLS/security isolation tests (18/18, see Phase 2) — the load-bearing security evidence for this whole project.
 ✅ Deno Edge Function typecheck + unit tests (`ai-assistant`, `account-delete`) — real, passing.
 ✅ Full-stack CI workflow written (`.github/workflows/ci.yml`): typecheck/unit-tests/build/secret-scan, the RLS
 suite (Docker-based, as CI runners have a real daemon unlike this sandbox), Deno function typecheck+tests, the
@@ -154,7 +154,7 @@ command, and get a fully functional app with manuscript editing (Tiptap, real de
 history), story bible, storyboard, timeline/goals, an AI assistant (14 modes, citations, test-mode by
 default), a real rule-based findings scanner, and working DOCX/TXT/Markdown/print/backup exports, with zero
 configuration. The desktop shell (Tauri 2) compiles cleanly against a real toolchain. The database schema and
-its security model are complete and proven by 13 automated isolation tests against a real Postgres instance,
+its security model are complete and proven by 18 automated isolation tests against a real Postgres instance,
 not just asserted. A full CI workflow, deployment/testing/security/privacy/cost documentation, and
 professional-review-pending legal drafts all exist. What's honestly *not* yet true: no live Supabase project
 has ever actually run this schema in production (Prod creds required to verify that), the real
@@ -166,8 +166,10 @@ now typechecks cleanly (a real gap this pass fixed — missing dependencies, a t
 never been run as an app in this environment (no Expo toolchain, simulator, or device). Every one of those
 gaps is stated specifically, above, with a concrete next step — not glossed over.
 
-## Final verification pass (end of session)
-Re-run immediately before this update, all green: shared-types/design-tokens/api-client/ai-contracts/web
-typecheck, shared-types + web unit tests (17 tests), the RLS isolation suite (13/13, local-Postgres backend),
-the Deno Edge Function typecheck + unit tests (3/3), the full Playwright golden-path e2e test, the production
-web build, and `cargo check` on the desktop shell. Commands are listed in `docs/TESTING.md`.
+## Final verification pass (most recent: 2026-09-18)
+Re-run immediately before this update, all green: `apps/web` typecheck (`tsc --noEmit`), `apps/web` unit tests
+(34 tests, vitest), the RLS isolation suite (18/18, local-Postgres backend), and the production web build.
+Earlier in the same overall effort: shared-types/design-tokens/api-client/ai-contracts typecheck, the Deno
+Edge Function typecheck + unit tests, the full Playwright golden-path e2e test, and `cargo check` on the
+desktop shell — not all re-run in this specific pass, so treat those as last-verified rather than re-confirmed
+today. Commands are listed in `docs/TESTING.md`.
