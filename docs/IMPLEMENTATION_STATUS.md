@@ -84,13 +84,16 @@ this environment. `tauri dev`/`tauri build` (needs a display server and, for ins
 `@inkwell/shared-types`/`design-tokens`/`api-client`: login, a Library tab with real RLS-protected Supabase
 queries, a plain-text (not rich-text) manuscript editor with debounced autosave, a story bible screen
 (`book/[id]/story-bible.tsx` — flat list of entries with inline name/summary editing and debounced autosave,
-a "+ New Character" button; no per-type tabs, relationships, tags, or appearances UI yet), and a timeline
+a "+ New Character" button; no per-type tabs, relationships, tags, or appearances UI yet), a timeline
 screen (`book/[id]/timeline.tsx` — ordered list of events with inline label/when/detail editing and
 debounced autosave, a "+ New Event" button; no fictional calendars, conflict detection, or linked
-scenes/characters UI yet), secure token storage (`expo-secure-store`, not AsyncStorage), AppState-aware
-token refresh. Storyboard, AI assistant, and an on-device local-first store are **not** built for mobile yet
-— mobile currently requires a configured Supabase backend (no local-only fallback the way web has).
-**Verified: Auto (typecheck only)** —
+scenes/characters UI yet), and an AI Assistant screen (`book/[id]/ai-assistant.tsx` — a single "ask"
+conversation per book, no mode picker, no series scope, no citation rendering; unlike the other screens it
+has no local cache to keep in sync, since mobile has no local-first store at all — it just re-reads
+`ai_conversations`/`ai_messages` from Postgres after every exchange), secure token storage
+(`expo-secure-store`, not AsyncStorage), AppState-aware token refresh. Storyboard and an on-device
+local-first store are **not** built for mobile yet — mobile currently requires a configured Supabase
+backend (no local-only fallback the way web has). **Verified: Auto (typecheck only)** —
 `pnpm --filter @inkwell/mobile typecheck` now passes cleanly and runs in CI; it didn't in earlier passes
 because `apps/mobile`'s `node_modules` had never actually been installed in this environment (fixed simply by
 running `pnpm install`), plus two real gaps this pass fixed: `apps/mobile/tsconfig.json` was missing

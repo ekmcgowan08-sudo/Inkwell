@@ -152,6 +152,9 @@ export default function TimelineScreen() {
           <Text style={styles.navLink}>Story Bible</Text>
         </Pressable>
         <Text style={[styles.navLink, styles.navLinkActive]}>Timeline</Text>
+        <Pressable onPress={() => router.replace(`/book/${projectId}/ai-assistant`)} accessibilityRole="button">
+          <Text style={styles.navLink}>AI Assistant</Text>
+        </Pressable>
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
       <FlatList
