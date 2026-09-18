@@ -92,7 +92,7 @@ export function SignupPage() {
     setLoading(false);
     if (error) setError(error);
     else if (needsEmailVerification) setSentVerification(true);
-    else navigate("/onboarding");
+    else navigate("/legal/accept", { state: { from: "/onboarding" } });
   }
 
   if (sentVerification) {
@@ -126,7 +126,8 @@ export function SignupPage() {
         />
         {error && <p className="iw-field-error" role="alert">{error}</p>}
         <p className="iw-help-text">
-          By continuing you agree to Inkwell's Terms of Service and Privacy Policy (drafts in <code>docs/legal/</code>, pending professional review).
+          You'll be asked to review and agree to Inkwell's Terms of Service and Privacy Policy (drafts in{" "}
+          <code>docs/legal/</code>, pending professional review) on the next screen.
         </p>
         <Button type="submit" disabled={loading || isLocalOnly}>
           {loading ? "Creating account…" : "Create account"}

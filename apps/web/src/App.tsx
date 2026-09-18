@@ -1,11 +1,13 @@
-import { useEffect } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./lib/auth";
+import { hasAcceptedLegalTerms } from "./lib/repos/profiles";
 import { registerCloseGuard, registerMenuBridge } from "./lib/desktopBridge";
 import { getSyncStatus } from "./lib/sync";
 import { Spinner } from "./components/ui/Feedback";
 import { LoginPage, SignupPage, ForgotPasswordPage, ResetPasswordPage } from "./features/auth/AuthPages";
 import { OnboardingPage } from "./features/auth/OnboardingPage";
+import { LegalAcceptancePage } from "./features/auth/LegalAcceptancePage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { AccountSettingsPage } from "./features/settings/AccountSettingsPage";
 import { ProjectLayout } from "./features/project/ProjectLayout";
@@ -20,8 +22,24 @@ import { VersionsPage } from "./features/project/VersionsPage";
 import { BookSettingsPage } from "./features/project/BookSettingsPage";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
-  const { userId, loading } = useAuth();
-  if (loading) {
+  const { userId, loading, isLocalOnly } = useAuth();
+  const location = useLocation();
+  const [checkingLegal, setCheckingLegal] = useState(!isLocalOnly);
+  const [needsLegalAcceptance, setNeedsLegalAcceptance] = useState(false);
+
+  useEffect(() => {
+    if (!userId || isLocalOnly) {
+      setCheckingLegal(false);
+      return;
+    }
+    setCheckingLegal(true);
+    hasAcceptedLegalTerms(userId).then((accepted) => {
+      setNeedsLegalAcceptance(!accepted);
+      setCheckingLegal(false);
+    });
+  }, [userId, isLocalOnly]);
+
+  if (loading || checkingLegal) {
     return (
       <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center" }}>
         <Spinner />
@@ -29,6 +47,7 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
     );
   }
   if (!userId) return <Navigate to="/login" replace />;
+  if (needsLegalAcceptance) return <Navigate to="/legal/accept" state={{ from: location.pathname }} replace />;
   return children;
 }
 
@@ -74,6 +93,7 @@ export function App() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/legal/accept" element={<LegalAcceptancePage />} />
       <Route
         path="/onboarding"
         element={

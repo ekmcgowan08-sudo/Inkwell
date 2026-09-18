@@ -4,6 +4,31 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-18 — Built the real Terms/Privacy acceptance flow; sourced the document text from docs/legal/ directly rather than copying it
+`docs/IMPLEMENTATION_STATUS.md` had flagged this honestly: the schema had `profiles.terms_accepted_at`/
+`privacy_accepted_at`, but signup only showed a plain-text "by continuing you agree..." sentence that wrote
+nothing anywhere — an aspirational disclaimer, not a real acceptance flow. Built `LegalAcceptancePage`
+(`/legal/accept`): two scrollable panes with the actual Terms of Service and Privacy Policy text, two explicit
+checkboxes (not a single "I agree to both"), and a `profiles` update on accept. New cloud signups route
+through it before onboarding; `RequireAuth` also gates already-authenticated cloud users who haven't accepted
+(covers an account created before this shipped), preserving where they were headed via router state so they
+land back there after accepting rather than always at the dashboard.
+
+The document text is imported straight from `docs/legal/TERMS_OF_SERVICE.md`/`PRIVACY_POLICY.md` via Vite's
+`?raw` query (`apps/web/src/features/auth/LegalAcceptancePage.tsx`), not copy-pasted into the client — the
+alternative (duplicating the text into a TS string or a second copy under `apps/web/public/`) would drift from
+the source of truth the moment either changed. Confirmed both that Rollup bundles it (grepped the production
+`dist/` output for the draft text) and that Vite's dev server actually serves a file living outside
+`apps/web`'s own directory (`/@fs/...` resolution, not blocked by `server.fs.allow` — this is a pnpm workspace,
+so Vite auto-detects the monorepo root and allows it). This only applies to cloud accounts: local-only mode
+has no `profiles` row and nothing leaves the browser, so it's treated as always-accepted, matching the same
+`isLocalOnly` short-circuit used everywhere else cloud-only behavior is gated.
+
+Deliberately did not touch the "drafts pending professional legal review" framing already on these documents
+— see `docs/OWNER_ACTIONS_REQUIRED.md` for that separate, owner-specific gate. Building the acceptance *flow*
+and getting the drafts *legally reviewed* are two different gaps; this closes only the first one, and the
+acceptance page says so prominently rather than implying the documents are final.
+
 ### 2026-09-18 — Found and fixed a real CLAUDE.md hard-rule violation: most tables had RLS policies but no isolation test
 CLAUDE.md is explicit: "every project-scoped table needs RLS, and it needs to actually be tested in
 `tests/rls/run.ts`, not just asserted in a comment." Started by auditing `public.appearances` (migration
