@@ -167,6 +167,34 @@ export async function setDailyGoal(projectId: string, targetWords: number): Prom
   return goal;
 }
 
+/**
+ * Sets the active daily goal's rest days (weekday numbers, 0=Sunday..6=Saturday — see
+ * `goalSchema.restDays` in packages/shared-types). A rest day is a day the author has told the
+ * streak calculator not to penalize for missing the daily word target, e.g. "I never write on
+ * Sundays." Creates a goal with a 0-word target if none exists yet, matching setDailyGoal's
+ * create-or-update shape.
+ */
+export async function setRestDays(projectId: string, restDays: number[]): Promise<Goal> {
+  const existing = await getActiveDailyGoal(projectId);
+  const now = nowIso();
+  const goal: Goal = existing
+    ? { ...existing, restDays, updatedAt: now }
+    : {
+        id: crypto.randomUUID(),
+        projectId,
+        kind: "daily",
+        targetWords: 0,
+        deadline: null,
+        restDays,
+        active: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+  await db.goals.put(goal);
+  void pushUpsert("goals", goal.id, goal as unknown as Record<string, unknown>);
+  return goal;
+}
+
 function todayLocalDate(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -207,7 +235,16 @@ export async function recordWordsWrittenToday(projectId: string, userId: string,
   return row;
 }
 
+/**
+ * A streak counts consecutive goal-met days, but a gap of one or more calendar days between two
+ * goal-met days no longer breaks it if every skipped day in that gap falls on a weekday the
+ * author has marked as a rest day (goal.restDays, 0=Sunday..6=Saturday) — see
+ * TimelineGoalsPage's "Rest days don't break a streak" copy, which this makes true rather than
+ * aspirational. A missed non-rest day still breaks the streak, same as before.
+ */
 export async function getStreak(projectId: string): Promise<number> {
+  const goal = await getActiveDailyGoal(projectId);
+  const restDays = new Set(goal?.restDays ?? []);
   const rows = await db.dailyProgress.where("projectId").equals(projectId).and((d) => d.goalMet).sortBy("date");
   if (rows.length === 0) return 0;
   let streak = 1;
@@ -215,7 +252,16 @@ export async function getStreak(projectId: string): Promise<number> {
     const cur = new Date(rows[i]!.date);
     const prev = new Date(rows[i - 1]!.date);
     const diffDays = Math.round((cur.getTime() - prev.getTime()) / 86400000);
-    if (diffDays === 1) streak++;
+    if (diffDays === 1) {
+      streak++;
+      continue;
+    }
+    let gapIsAllRestDays = diffDays > 1;
+    for (let offset = 1; offset < diffDays && gapIsAllRestDays; offset++) {
+      const gapDate = new Date(prev.getTime() + offset * 86400000);
+      if (!restDays.has(gapDate.getDay())) gapIsAllRestDays = false;
+    }
+    if (gapIsAllRestDays) streak++;
     else break;
   }
   return streak;

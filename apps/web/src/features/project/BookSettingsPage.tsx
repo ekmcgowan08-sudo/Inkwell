@@ -1,17 +1,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLiveQuery } from "dexie-react-hooks";
 import { useProjectContext } from "./ProjectLayout";
 import { useAuth } from "../../lib/auth";
 import { updateProject, softDeleteProject } from "../../lib/repos/projects";
+import { getActiveDailyGoal, setRestDays } from "../../lib/repos/storyboardTimeline";
 import { TextField, SelectField } from "../../components/ui/FormControls";
 import { Button } from "../../components/ui/Button";
 import { ConfirmDialog } from "../../components/ui/Dialog";
+
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function BookSettingsPage() {
   const { project } = useProjectContext();
   const { userId } = useAuth();
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const dailyGoal = useLiveQuery(() => getActiveDailyGoal(project.id), [project.id]);
+  const restDays = dailyGoal?.restDays ?? [];
+
+  function toggleRestDay(day: number) {
+    const next = restDays.includes(day) ? restDays.filter((d) => d !== day) : [...restDays, day];
+    void setRestDays(project.id, next);
+  }
 
   return (
     <div className="iw-page" style={{ maxWidth: 640 }}>
@@ -53,6 +64,34 @@ export function BookSettingsPage() {
             value={project.dailyGoalWords}
             onChange={(e) => updateProject(project.id, { dailyGoalWords: Number(e.target.value) || 0 })}
           />
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 13, marginBottom: 8 }}>Rest days</div>
+          <p className="iw-help-text" style={{ marginBottom: 8 }}>
+            Mark the days you don't plan to write. Missing your daily goal on a rest day won't break your streak.
+          </p>
+          <div style={{ display: "flex", gap: 6 }}>
+            {WEEKDAY_LABELS.map((label, day) => {
+              const active = restDays.includes(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleRestDay(day)}
+                  aria-pressed={active}
+                  className="iw-badge"
+                  style={{
+                    cursor: "pointer",
+                    border: active ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
+                    background: active ? "var(--color-accent)" : "transparent",
+                    color: active ? "var(--color-accent-text)" : "var(--color-text-secondary)",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
