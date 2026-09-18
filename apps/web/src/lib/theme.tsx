@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { loadRemotePreferences, saveRemotePreferences } from "./repos/preferences";
+import { isLocalOnlyMode } from "./env";
 
 export type ThemeChoice = "dark" | "light" | "system";
 
@@ -32,17 +34,33 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-reduced-motion", String(reducedMotion));
   }, [reducedMotion]);
 
+  // Best-effort cross-device sync for cloud accounts: fetch the server's copy once (may briefly
+  // override the localStorage-based initial paint if they differ — the same trade every other
+  // "load then reconcile" flow in this app makes), local-only mode skips it entirely.
+  useEffect(() => {
+    if (isLocalOnlyMode) return;
+    loadRemotePreferences().then((remote) => {
+      if (!remote) return;
+      setThemeState(remote.theme);
+      setReducedMotionState(remote.reducedMotion);
+      localStorage.setItem(THEME_KEY, remote.theme);
+      localStorage.setItem(MOTION_KEY, String(remote.reducedMotion));
+    });
+  }, []);
+
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
       setTheme: (t) => {
         setThemeState(t);
         localStorage.setItem(THEME_KEY, t);
+        void saveRemotePreferences({ theme: t, reducedMotion });
       },
       reducedMotion,
       setReducedMotion: (v) => {
         setReducedMotionState(v);
         localStorage.setItem(MOTION_KEY, String(v));
+        void saveRemotePreferences({ theme, reducedMotion: v });
       },
     }),
     [theme, reducedMotion],

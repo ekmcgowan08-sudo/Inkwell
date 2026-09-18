@@ -4,6 +4,23 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-18 — Preferences sync: localStorage stays authoritative for paint timing, Supabase is best-effort reconciliation
+Third and (for this pass) last hit from the unused-table audit: `preferences` (theme, reduced_motion) has
+existed since early in the project specifically for cross-device sync, but `ThemeProvider` only ever touched
+`localStorage`. `ThemeProvider` sits outside `AuthProvider` in `main.tsx` deliberately, so theme applies
+before auth resolves and there's no flash of the wrong theme on load — that ordering can't change without
+reintroducing that flash, so `ThemeProvider` can't consume `useAuth()`'s context. Instead
+`loadRemotePreferences`/`saveRemotePreferences` call `getSupabase()` and `isLocalOnlyMode` directly, the same
+standalone utilities every non-React repo file already uses, sidestepping the provider-order constraint
+entirely rather than restructuring the tree.
+
+Sequence on mount: paint immediately from `localStorage` (unchanged, zero added latency), then fetch the
+remote row in the background and reconcile if it differs — a second, later state update, same trade-off every
+other "local-first, then sync" flow in this app already makes (e.g. the daily-progress baseline, the sync
+queue). On every `setTheme`/`setReducedMotion` call, write `localStorage` synchronously as before and push to
+Supabase fire-and-forget alongside it. Local-only mode short-circuits both functions immediately — no account,
+nothing to sync.
+
 ### 2026-09-18 — Parts: assignment via a select dropdown, not drag-and-drop across groups
 Continuing the "unused Dexie table" audit that caught `writing_sessions`, `parts` was the same shape of gap,
 just silent rather than documented: schema, migration, RLS policies, and a Zod type existed since early in the
