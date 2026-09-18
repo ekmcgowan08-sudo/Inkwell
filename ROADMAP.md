@@ -32,8 +32,29 @@ for the full current-state detail behind each item.
    regardless of book size, as the architecture intended.
 6. ~~**Manuscript chapter drag-and-drop reordering**~~ **Done.** Mirrors the storyboard's dnd-kit pattern
    (pointer drag + keyboard-accessible up/down buttons), wired to the previously-unused `reorderChapters`.
-7. **Deploy a real Supabase project** and run every currently-code-reviewed-but-unexercised path (auth
-   flows, cloud sync, both Edge Functions) against it for the first time.
+7. ~~**Full RLS isolation-test coverage.**~~ **Done.** Auditing `supabase/migrations/*.sql` against
+   `tests/rls/run.ts` found 17 tables with real, correct RLS policies that had never once been exercised by a
+   test (`canon_facts`, `custom_field_defs`, `daily_progress`, `document_revisions`, `export_jobs`,
+   `generation_jobs`, `goals`, `import_jobs`, `integration_connections`, `media_assets`, `named_snapshots`,
+   `parts`, `relationships`, `story_threads`, `storyboard_cards`, `timeline_events`, `writing_sessions`, plus
+   `ai_usage`) — a real gap against CLAUDE.md's "actually tested, not just asserted" hard rule. Every table in
+   the schema now has one. 53/53 passing (was 16). See `docs/DECISIONS.md` (2026-09-18).
+8. ~~**Real Terms/Privacy acceptance flow.**~~ **Done.** Signup used to show a plain-text "by continuing you
+   agree..." sentence that wrote nothing anywhere. `LegalAcceptancePage` now shows the actual draft documents
+   (sourced live from `docs/legal/` via a Vite `?raw` import, never copy-pasted) behind two explicit
+   checkboxes, and records acceptance on `profiles`. Cloud-only — local-only mode has no account.
+9. ~~**Suggested appearances (rule-based, not an AI job).**~~ **Done.** `detectAppearances` matches each
+   story-bible entry's name/aliases against scene text and creates unconfirmed suggestions for the author to
+   review — a plain string-matching question, no model call needed. Explicitly user-triggered.
+10. ~~**Writing sessions and Parts — two more schema-only tables found dead.**~~ **Done.** Both had a schema,
+    migration, RLS policies, and a Zod type with zero client usage anywhere. Writing sessions now track
+    per-visit editing time/word deltas (best-effort start/end, see `docs/DECISIONS.md`); Parts now have real
+    create/rename/reorder/delete and a per-chapter assignment control in the manuscript sidebar.
+11. ~~**Cross-device theme/reduced-motion sync.**~~ **Done.** The `preferences` table existed for exactly this
+    since early in the project; `ThemeProvider` only ever touched `localStorage`. Now synced for cloud
+    accounts, with `localStorage` staying authoritative for instant paint on load.
+12. **Deploy a real Supabase project** and run every currently-code-reviewed-but-unexercised path (auth
+    flows, cloud sync, both Edge Functions) against it for the first time.
 
 ## Medium-term
 
