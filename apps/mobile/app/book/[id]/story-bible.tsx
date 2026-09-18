@@ -155,6 +155,9 @@ export default function StoryBibleScreen() {
         <Pressable onPress={() => router.replace(`/book/${projectId}/ai-assistant`)} accessibilityRole="button">
           <Text style={styles.navLink}>AI Assistant</Text>
         </Pressable>
+        <Pressable onPress={() => router.replace(`/book/${projectId}/storyboard`)} accessibilityRole="button">
+          <Text style={styles.navLink}>Storyboard</Text>
+        </Pressable>
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
       <FlatList

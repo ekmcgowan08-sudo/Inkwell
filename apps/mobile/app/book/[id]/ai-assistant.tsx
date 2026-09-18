@@ -96,6 +96,9 @@ export default function AIAssistantScreen() {
           <Text style={styles.navLink}>Timeline</Text>
         </Pressable>
         <Text style={[styles.navLink, styles.navLinkActive]}>AI Assistant</Text>
+        <Pressable onPress={() => router.replace(`/book/${projectId}/storyboard`)} accessibilityRole="button">
+          <Text style={styles.navLink}>Storyboard</Text>
+        </Pressable>
       </View>
       <FlatList
         ref={listRef}

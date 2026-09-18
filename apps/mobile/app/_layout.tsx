@@ -31,6 +31,7 @@ export default function RootLayout() {
           <Stack.Screen name="book/[id]/story-bible" options={{ title: "Story Bible" }} />
           <Stack.Screen name="book/[id]/timeline" options={{ title: "Timeline" }} />
           <Stack.Screen name="book/[id]/ai-assistant" options={{ title: "AI Assistant" }} />
+          <Stack.Screen name="book/[id]/storyboard" options={{ title: "Storyboard" }} />
         </Stack>
       </AuthProvider>
     </SafeAreaProvider>

@@ -105,6 +105,9 @@ export default function ManuscriptScreen() {
         <Pressable onPress={() => router.replace(`/book/${projectId}/ai-assistant`)} accessibilityRole="button">
           <Text style={styles.navLink}>AI Assistant</Text>
         </Pressable>
+        <Pressable onPress={() => router.replace(`/book/${projectId}/storyboard`)} accessibilityRole="button">
+          <Text style={styles.navLink}>Storyboard</Text>
+        </Pressable>
       </View>
       <ScrollView horizontal style={styles.chapterBar} showsHorizontalScrollIndicator={false}>
         {chapters.map((c) => (

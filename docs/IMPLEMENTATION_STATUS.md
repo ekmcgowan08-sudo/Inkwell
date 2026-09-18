@@ -87,13 +87,17 @@ queries, a plain-text (not rich-text) manuscript editor with debounced autosave,
 a "+ New Character" button; no per-type tabs, relationships, tags, or appearances UI yet), a timeline
 screen (`book/[id]/timeline.tsx` — ordered list of events with inline label/when/detail editing and
 debounced autosave, a "+ New Event" button; no fictional calendars, conflict detection, or linked
-scenes/characters UI yet), and an AI Assistant screen (`book/[id]/ai-assistant.tsx` — a single "ask"
+scenes/characters UI yet), an AI Assistant screen (`book/[id]/ai-assistant.tsx` — a single "ask"
 conversation per book, no mode picker, no series scope, no citation rendering; unlike the other screens it
 has no local cache to keep in sync, since mobile has no local-first store at all — it just re-reads
-`ai_conversations`/`ai_messages` from Postgres after every exchange), secure token storage
-(`expo-secure-store`, not AsyncStorage), AppState-aware token refresh. Storyboard and an on-device
-local-first store are **not** built for mobile yet — mobile currently requires a configured Supabase
-backend (no local-only fallback the way web has). **Verified: Auto (typecheck only)** —
+`ai_conversations`/`ai_messages` from Postgres after every exchange), and a storyboard screen
+(`book/[id]/storyboard.tsx` — cards grouped into columns/sections, with move-up/move-down buttons as the
+real alternative to drag-and-drop rather than an afterthought, inline title/summary/column editing with
+debounced autosave; no POV/location/character/thread linking UI yet), secure token storage
+(`expo-secure-store`, not AsyncStorage), AppState-aware token refresh. An on-device local-first store is
+**not** built for mobile yet — mobile currently requires a configured Supabase backend (no local-only
+fallback the way web has). Every core module from the product spec now has *some* mobile screen, each
+honestly narrower than its web counterpart. **Verified: Auto (typecheck only)** —
 `pnpm --filter @inkwell/mobile typecheck` now passes cleanly and runs in CI; it didn't in earlier passes
 because `apps/mobile`'s `node_modules` had never actually been installed in this environment (fixed simply by
 running `pnpm install`), plus two real gaps this pass fixed: `apps/mobile/tsconfig.json` was missing
