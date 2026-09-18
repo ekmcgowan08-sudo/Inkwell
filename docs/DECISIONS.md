@@ -4,6 +4,33 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-18 — Parts: assignment via a select dropdown, not drag-and-drop across groups
+Continuing the "unused Dexie table" audit that caught `writing_sessions`, `parts` was the same shape of gap,
+just silent rather than documented: schema, migration, RLS policies, and a Zod type existed since early in the
+project (`chapterSchema.partId` is nullable — an optional grouping, per `PRODUCT.md`'s `parts → chapters →
+scenes` hierarchy), but nothing in `apps/web` ever created, read, or displayed a part. Unlike
+`writing_sessions`, this one wasn't even flagged in `docs/IMPLEMENTATION_STATUS.md` — it just wasn't there.
+
+Implemented parts management (create/rename/reorder/delete) and a per-chapter assignment control. The one
+deliberate scope cut: chapter-to-part assignment is a `<select>` dropdown (mirroring the storyboard's
+column-select pattern for moving a card between columns without dragging), not drag-and-drop across visual
+part groups. The existing chapter reordering already uses a single flat `dnd-kit` `SortableContext` over the
+whole chapter list; making drag-and-drop work across visually-grouped part sections would mean multiple
+`SortableContext`s with cross-container drop handling — a materially bigger rewrite of already-working,
+tested reordering code for a convenience feature (moving a chapter into a part) that a plain select already
+serves correctly. If part-grouped visual sections with drag-and-drop become a real ask, that's a separate,
+larger piece of work, not a follow-up to this fix.
+
+Deleting a part ungroups its chapters (`partId` → `null`) rather than deleting them, matching the "never
+overwrite/destroy content silently" spirit — a part is an organizational label, not a container. No
+`deletedItems` recovery-bin entry for a deleted part itself (unlike chapters/story-bible entries), following
+the same precedent as `deleteRelationship`: lightweight structural/organizational rows get a plain delete, not
+a 30-day recovery window, reserving that for actual authored content.
+
+Verified with a real Playwright browser run (not part of the committed suite): created a part, assigned a
+chapter to it via the select, reloaded the page, and confirmed the assignment survived — proving it actually
+persisted to IndexedDB and wasn't just React state.
+
 ### 2026-09-18 — Found and fixed another real false claim: `writing_sessions` was documented as "real persisted" but was dead code
 While closing out the appearances gap, went looking for the same failure pattern elsewhere: a Dexie table
 declared in `db.ts` with zero reads/writes anywhere else in `apps/web`. Found `writingSessions` — and

@@ -1,7 +1,22 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { db } from "../db";
 import { createProject } from "./projects";
-import { autosaveScene, createChapter, listChapters, listScenes, listRevisions, restoreRevision, renameChapter, reorderChapters } from "./manuscript";
+import {
+  assignChapterToPart,
+  autosaveScene,
+  createChapter,
+  createPart,
+  deletePart,
+  listChapters,
+  listParts,
+  listScenes,
+  listRevisions,
+  renamePart,
+  reorderParts,
+  restoreRevision,
+  renameChapter,
+  reorderChapters,
+} from "./manuscript";
 
 const USER_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -73,5 +88,33 @@ describe("manuscript repo (local-first autosave)", () => {
     await reorderChapters(project.id, [second.id, chapter!.id]);
     expect((await db.chapters.get(chapter!.id))!.revision).toBe(2);
     expect((await db.chapters.get(second.id))!.revision).toBe(1);
+  });
+
+  it("parts: create, rename, reorder, assign chapters, and delete without deleting chapters", async () => {
+    const project = await createProject(USER_ID, { title: "Test Book" });
+    const [chapter] = await listChapters(project.id);
+    expect(chapter!.partId).toBeNull();
+
+    const partOne = await createPart(project.id, "Part One");
+    const partTwo = await createPart(project.id, "Part Two");
+    expect(await listParts(project.id)).toHaveLength(2);
+
+    await renamePart(partOne.id, "Part One: The Fall");
+    expect((await db.parts.get(partOne.id))!.title).toBe("Part One: The Fall");
+
+    await reorderParts([partTwo.id, partOne.id]);
+    const reordered = await listParts(project.id);
+    expect(reordered[0]!.id).toBe(partTwo.id);
+    expect(reordered[1]!.id).toBe(partOne.id);
+
+    await assignChapterToPart(chapter!.id, partOne.id);
+    expect((await db.chapters.get(chapter!.id))!.partId).toBe(partOne.id);
+
+    // Deleting a part ungroups its chapters — it never deletes them.
+    await deletePart(partOne.id);
+    expect(await listParts(project.id)).toHaveLength(1);
+    const chapterAfterDelete = await db.chapters.get(chapter!.id);
+    expect(chapterAfterDelete).toBeDefined();
+    expect(chapterAfterDelete!.partId).toBeNull();
   });
 });

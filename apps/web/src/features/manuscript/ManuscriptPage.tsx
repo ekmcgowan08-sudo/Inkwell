@@ -11,16 +11,20 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, GripVertical, Maximize2, Minimize2, Plus, Trash2 } from "lucide-react";
 import { db } from "../../lib/db";
-import type { Chapter } from "@inkwell/shared-types";
+import type { Chapter, Part } from "@inkwell/shared-types";
 import { useAuth } from "../../lib/auth";
 import { useProjectContext } from "../project/ProjectLayout";
 import {
+  assignChapterToPart,
   createChapter,
+  createPart,
   createScene,
   autosaveScene,
+  deletePart,
   listScenes,
   projectWordCount,
   renameChapter,
+  renamePart,
   reorderChapters,
   softDeleteChapter,
 } from "../../lib/repos/manuscript";
@@ -42,17 +46,21 @@ function SortableChapterRow({
   active,
   index,
   count,
+  parts,
   onOpen,
   onDelete,
   onMove,
+  onMovePart,
 }: {
   chapter: Chapter;
   active: boolean;
   index: number;
   count: number;
+  parts: Part[];
   onOpen: () => void;
   onDelete: () => void;
   onMove: (direction: -1 | 1) => void;
+  onMovePart: (partId: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: chapter.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -70,6 +78,22 @@ function SortableChapterRow({
       <button className="title" onClick={onOpen}>
         {chapter.title}
       </button>
+      {parts.length > 0 && (
+        <select
+          aria-label={`Part for ${chapter.title}`}
+          value={chapter.partId ?? ""}
+          onChange={(e) => onMovePart(e.target.value || null)}
+          className="iw-select"
+          style={{ fontSize: 10, padding: "1px 4px", minHeight: "auto", maxWidth: 90 }}
+        >
+          <option value="">No part</option>
+          {parts.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.title}
+            </option>
+          ))}
+        </select>
+      )}
       <IconButton label="Move up" onClick={() => onMove(-1)} disabled={index === 0}>
         <ArrowUp size={12} />
       </IconButton>
@@ -91,6 +115,8 @@ export function ManuscriptPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [deleteChapterId, setDeleteChapterId] = useState<string | null>(null);
+  const [deletePartId, setDeletePartId] = useState<string | null>(null);
+  const [newPartTitle, setNewPartTitle] = useState("");
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("saved");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,6 +137,11 @@ export function ManuscriptPage() {
 
   const chapters = useLiveQuery(
     () => db.chapters.where("projectId").equals(project.id).and((c) => !c.deletedAt).sortBy("sortOrder"),
+    [project.id],
+  ) ?? [];
+
+  const parts = useLiveQuery(
+    () => db.parts.where("projectId").equals(project.id).and((p) => !p.deletedAt).sortBy("sortOrder"),
     [project.id],
   ) ?? [];
 
@@ -228,6 +259,12 @@ export function ManuscriptPage() {
     navigate(`/project/${project.id}/manuscript/${chapter.id}`);
   }
 
+  async function onAddPart() {
+    const title = newPartTitle.trim() || `Part ${parts.length + 1}`;
+    await createPart(project.id, title);
+    setNewPartTitle("");
+  }
+
   async function onAddScene() {
     if (!activeChapter) return;
     await flushNow();
@@ -254,6 +291,39 @@ export function ManuscriptPage() {
   return (
     <div className={`iw-ms-layout ${focusMode ? "iw-ms-focus" : ""}`}>
       <div className="iw-ms-chapters">
+        {parts.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div className="iw-help-text" style={{ marginBottom: 8, paddingLeft: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+              Parts
+            </div>
+            {parts.map((p) => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                <input
+                  value={p.title}
+                  onChange={(e) => renamePart(p.id, e.target.value)}
+                  style={{ flex: 1, background: "transparent", border: "none", color: "var(--color-text-secondary)", fontSize: 12, outline: "none", padding: "2px 4px" }}
+                />
+                <IconButton label={`Delete ${p.title}`} onClick={() => setDeletePartId(p.id)}>
+                  <Trash2 size={12} />
+                </IconButton>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+          <input
+            value={newPartTitle}
+            onChange={(e) => setNewPartTitle(e.target.value)}
+            placeholder="New part title…"
+            aria-label="New part title"
+            className="iw-input"
+            style={{ fontSize: 11, padding: "4px 6px", flex: 1 }}
+          />
+          <Button size="sm" variant="secondary" onClick={onAddPart}>
+            <Plus size={12} /> Part
+          </Button>
+        </div>
+
         <div className="iw-help-text" style={{ marginBottom: 12, paddingLeft: 4, textTransform: "uppercase", letterSpacing: 1 }}>
           Chapters
         </div>
@@ -266,9 +336,11 @@ export function ManuscriptPage() {
                 active={c.id === activeChapter?.id}
                 index={i}
                 count={chapters.length}
+                parts={parts}
                 onOpen={async () => { await flushNow(); navigate(`/project/${project.id}/manuscript/${c.id}`); }}
                 onDelete={() => setDeleteChapterId(c.id)}
                 onMove={(direction) => moveChapterByKeyboard(c, direction)}
+                onMovePart={(partId) => assignChapterToPart(c.id, partId)}
               />
             ))}
           </SortableContext>
@@ -340,6 +412,15 @@ export function ManuscriptPage() {
         onConfirm={() => deleteChapterId && userId && softDeleteChapter(deleteChapterId, project.id, userId)}
         title="Delete this chapter?"
         description="It moves to recovery for 30 days before permanent removal."
+        confirmLabel="Delete"
+        danger
+      />
+      <ConfirmDialog
+        open={!!deletePartId}
+        onClose={() => setDeletePartId(null)}
+        onConfirm={() => deletePartId && deletePart(deletePartId)}
+        title="Delete this part?"
+        description="Its chapters are not deleted — they just move back to having no part."
         confirmLabel="Delete"
         danger
       />

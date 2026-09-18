@@ -1,4 +1,4 @@
-import type { Chapter, Scene } from "@inkwell/shared-types";
+import type { Chapter, Part, Scene } from "@inkwell/shared-types";
 import { countWords, extractPlainText } from "@inkwell/shared-types";
 import { db, nowIso } from "../db";
 import { pushUpsert, pushDelete } from "../sync";
@@ -9,6 +9,74 @@ export async function listChapters(projectId: string): Promise<Chapter[]> {
     .equals(projectId)
     .and((c) => !c.deletedAt)
     .sortBy("sortOrder");
+}
+
+// ---- Parts (optional grouping above chapters — see PRODUCT.md's manuscript hierarchy) ----
+
+export async function listParts(projectId: string): Promise<Part[]> {
+  return db.parts.where("projectId").equals(projectId).and((p) => !p.deletedAt).sortBy("sortOrder");
+}
+
+export async function createPart(projectId: string, title: string): Promise<Part> {
+  const existing = await listParts(projectId);
+  const now = nowIso();
+  const part: Part = {
+    id: crypto.randomUUID(),
+    projectId,
+    title,
+    sortOrder: existing.length,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+  await db.parts.put(part);
+  void pushUpsert("parts", part.id, part as unknown as Record<string, unknown>);
+  return part;
+}
+
+export async function renamePart(id: string, title: string): Promise<void> {
+  await db.parts.update(id, { title, updatedAt: nowIso() });
+  const full = await db.parts.get(id);
+  if (full) void pushUpsert("parts", id, full as unknown as Record<string, unknown>);
+}
+
+export async function reorderParts(orderedIds: string[]): Promise<void> {
+  await db.transaction("rw", db.parts, async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.parts.update(orderedIds[i]!, { sortOrder: i, updatedAt: nowIso() });
+    }
+  });
+  for (const id of orderedIds) {
+    const full = await db.parts.get(id);
+    if (full) void pushUpsert("parts", id, full as unknown as Record<string, unknown>);
+  }
+}
+
+/**
+ * A part is purely an organizational label, never a container whose removal should take content
+ * with it — deleting one ungroups its chapters (partId -> null) rather than deleting them.
+ */
+export async function deletePart(id: string): Promise<void> {
+  const chaptersInPart = await db.chapters.where("partId").equals(id).toArray();
+  await db.transaction("rw", db.parts, db.chapters, async () => {
+    for (const chapter of chaptersInPart) {
+      await db.chapters.update(chapter.id, { partId: null, updatedAt: nowIso() });
+    }
+    await db.parts.delete(id);
+  });
+  void pushDelete("parts", id);
+  for (const chapter of chaptersInPart) {
+    const full = await db.chapters.get(chapter.id);
+    if (full) void pushUpsert("chapters", chapter.id, full as unknown as Record<string, unknown>);
+  }
+}
+
+export async function assignChapterToPart(chapterId: string, partId: string | null): Promise<void> {
+  const current = await db.chapters.get(chapterId);
+  if (!current) return;
+  await db.chapters.update(chapterId, { partId, revision: current.revision + 1, updatedAt: nowIso() });
+  const full = await db.chapters.get(chapterId);
+  if (full) void pushUpsert("chapters", chapterId, full as unknown as Record<string, unknown>);
 }
 
 export async function listScenes(chapterId: string): Promise<Scene[]> {
