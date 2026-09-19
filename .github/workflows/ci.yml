@@ -88,7 +88,7 @@ jobs:
 
       - name: Edge Function unit tests
         working-directory: supabase/functions
-        run: deno test --config deno.json --allow-env ai-assistant/index.test.ts _shared/buildContext.test.ts _shared/rateLimit.test.ts
+        run: deno test --config deno.json --allow-env ai-assistant/index.test.ts _shared/buildContext.test.ts _shared/rateLimit.test.ts _shared/errors.test.ts
 
   e2e:
     runs-on: ubuntu-latest

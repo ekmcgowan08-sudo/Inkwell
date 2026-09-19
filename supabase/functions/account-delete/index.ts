@@ -10,6 +10,7 @@
 import { AssistantError } from "@inkwell/ai-contracts";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabaseClients.ts";
+import { statusForErrorCode } from "../_shared/errors.ts";
 
 async function handleRequest(req: Request): Promise<Response> {
   const preflight = handleCors(req);
@@ -47,8 +48,7 @@ async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ success: true });
   } catch (err) {
     if (err instanceof AssistantError) {
-      const status = { unauthorized: 401, project_not_found: 404, ai_disabled_for_project: 403, rate_limited: 429, usage_allowance_exceeded: 429, provider_error: 502, invalid_request: 400 }[err.code];
-      return jsonResponse({ error: err.message, code: err.code }, status);
+      return jsonResponse({ error: err.message, code: err.code }, statusForErrorCode(err.code));
     }
     console.error("account-delete unhandled error:", err);
     return jsonResponse({ error: "Internal error." }, 500);

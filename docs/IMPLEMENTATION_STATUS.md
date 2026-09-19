@@ -120,7 +120,17 @@ the brief's own phase ordering (media/subscriptions after core product).
 
 ## Phase 11 — Security, accessibility, performance, tests
 ✅ RLS/security isolation tests (53/53, see Phase 2) — the load-bearing security evidence for this whole project.
-✅ Deno Edge Function typecheck + unit tests (`ai-assistant`, `account-delete`) — real, passing.
+✅ Deno Edge Function typecheck (`ai-assistant`, `account-delete`) and unit tests. This line previously
+implied `account-delete` had its own unit tests; it didn't — the function has almost no pure logic to test in
+isolation (auth check, insert an audit row, delete the user), and its `err.code` → HTTP status mapping was
+duplicated verbatim from `ai-assistant/index.ts` rather than shared. Extracted that mapping into
+`_shared/errors.ts` (`statusForErrorCode`), now imported by both functions instead of copy-pasted, and added
+`_shared/errors.test.ts` covering every `AssistantErrorCode`. 15/15 Deno tests passing across
+`ai-assistant/index.test.ts`, `_shared/rateLimit.test.ts`, `_shared/buildContext.test.ts`, and
+`_shared/errors.test.ts`. `account-delete`'s actual request-handling flow (auth → audit insert → `deleteUser`)
+still isn't unit-tested — it isn't dependency-injected, so testing it would mean either refactoring for that
+or a live Supabase project, neither done here — but it typechecks against the real dependency graph and is
+code-reviewed.
 ✅ Full-stack CI workflow written (`.github/workflows/ci.yml`): typecheck/unit-tests/build/secret-scan, the RLS
 suite (Docker-based, as CI runners have a real daemon unlike this sandbox), Deno function typecheck+tests, the
 Playwright e2e suite, and a Rust `cargo check` job with the exact Tauri Linux dependencies this repo verified

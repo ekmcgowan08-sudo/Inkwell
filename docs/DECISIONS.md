@@ -4,6 +4,23 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-19 — Found another false doc claim: `account-delete` had no unit tests despite the doc saying it did
+`docs/IMPLEMENTATION_STATUS.md` claimed "Deno Edge Function typecheck + unit tests (`ai-assistant`,
+`account-delete`) — real, passing," but only `ai-assistant/index.test.ts` existed; `account-delete` had zero
+test coverage. Also found the CI workflow's Edge Function test step (`.github/workflows/ci.yml`) only ran
+`ai-assistant/index.test.ts` and two `_shared` tests — real coverage gaps that a green CI badge would have
+hidden.
+
+Rather than writing a token test just to make the doc line true, found real value to extract:
+`account-delete/index.ts` and `ai-assistant/index.ts` both had the exact same `AssistantErrorCode` → HTTP
+status mapping object copy-pasted verbatim in their catch blocks. Extracted it into
+`supabase/functions/_shared/errors.ts` (`statusForErrorCode`), now imported by both instead of duplicated, and
+added `_shared/errors.test.ts` — including a test that iterates `errorCodeSchema.options` so a new error code
+added without a status mapping fails loudly instead of falling through to `undefined`. Updated the CI workflow
+to run it. `account-delete`'s actual request-handling flow (auth → audit insert → `deleteUser`) still isn't
+unit-tested — it isn't dependency-injected for it, and there isn't much pure logic left to extract from three
+sequential calls — so the doc now says that precisely rather than claiming more than what's true.
+
 ### 2026-09-18 — Preferences sync: localStorage stays authoritative for paint timing, Supabase is best-effort reconciliation
 Third and (for this pass) last hit from the unused-table audit: `preferences` (theme, reduced_motion) has
 existed since early in the project specifically for cross-device sync, but `ThemeProvider` only ever touched

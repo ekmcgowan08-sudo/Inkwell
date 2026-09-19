@@ -27,6 +27,7 @@ import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabaseClients.ts";
 import { buildContextFromSupabase } from "../_shared/buildContext.ts";
 import { checkAndRecordRateLimit } from "../_shared/rateLimit.ts";
+import { statusForErrorCode } from "../_shared/errors.ts";
 
 function currentPeriodMonth(): string {
   const now = new Date();
@@ -233,8 +234,7 @@ async function handleRequest(req: Request): Promise<Response> {
     });
   } catch (err) {
     if (err instanceof AssistantError) {
-      const status = { unauthorized: 401, project_not_found: 404, ai_disabled_for_project: 403, rate_limited: 429, usage_allowance_exceeded: 429, provider_error: 502, invalid_request: 400 }[err.code];
-      return jsonResponse({ error: err.message, code: err.code }, status);
+      return jsonResponse({ error: err.message, code: err.code }, statusForErrorCode(err.code));
     }
     console.error("ai-assistant unhandled error:", err);
     return jsonResponse({ error: "Internal error." }, 500);
