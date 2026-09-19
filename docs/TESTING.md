@@ -5,8 +5,9 @@
 | Suite | Command | What it proves | Verified |
 |---|---|---|---|
 | Shared-types unit tests | `pnpm --filter @inkwell/shared-types test` | Word/page/reading-time math, plain-text extraction from rich-text docs | ✅ Auto, passing |
-| Web unit tests | `pnpm --filter @inkwell/web test` | Import chapter-detection, autosave/revision-history flow (via `fake-indexeddb`) | ✅ Auto, passing |
-| RLS isolation suite | `pnpm test:rls` | 14 assertions proving cross-user/cross-project isolation against a real Postgres instance running the real migrations | ✅ Auto, passing (both Docker and local-Postgres backends — see `docs/DECISIONS.md`) |
+| AI-contracts unit tests | `pnpm --filter @inkwell/ai-contracts test` | Findings-block extraction from a model response (`findingsExtraction.test.ts`) | ✅ Auto, passing |
+| Web unit tests | `pnpm --filter @inkwell/web test` | Import chapter-detection, autosave/revision-history flow, sync/conflict resolution, rest-days streak math, appearances detection, writing sessions, parts, theme/legal-acceptance sync (via `fake-indexeddb` and a mocked Supabase client) — 15 test files, 54 tests | ✅ Auto, passing |
+| RLS isolation suite | `pnpm test:rls` | 53 assertions proving cross-user/cross-project isolation against a real Postgres instance running the real migrations — every table in the schema now has one (see `docs/DECISIONS.md`, 2026-09-18) | ✅ Auto, passing (both Docker and local-Postgres backends — see `docs/DECISIONS.md`) |
 | Edge Function tests | `deno test --config supabase/functions/deno.json --allow-env supabase/functions/ai-assistant/index.test.ts supabase/functions/_shared/rateLimit.test.ts supabase/functions/_shared/buildContext.test.ts supabase/functions/_shared/errors.test.ts` | Provider fallback logic, period-month formatting, rate limiting, ranked/series context building, error-code-to-HTTP-status mapping (shared by `ai-assistant` and `account-delete`) | ✅ Auto, 15/15 passing |
 | Edge Function typecheck | `deno check --config supabase/functions/deno.json supabase/functions/ai-assistant/index.ts` (and `account-delete`) | Both functions typecheck against the real npm dependency graph Deno would actually run | ✅ Auto, passing |
 | Playwright e2e | `npx playwright test --config tests/e2e/playwright.config.ts` | The full golden path in a real Chromium browser: create book → write → autosave → story bible → storyboard → timeline/goals → AI assistant → findings scan → exports → back to dashboard | ✅ Browser, passing |
@@ -98,10 +99,12 @@ which was not done in this pass.
 ```bash
 pnpm install
 pnpm --filter @inkwell/shared-types test
+pnpm --filter @inkwell/ai-contracts test
 pnpm --filter @inkwell/web test
 pnpm --filter @inkwell/web typecheck
+pnpm --filter @inkwell/mobile typecheck
 pnpm test:rls                      # needs Docker (or RLS_TEST_BACKEND=local, see docs/DECISIONS.md)
-cd supabase/functions && deno test --config deno.json --allow-env ai-assistant/index.test.ts
+cd supabase/functions && deno test --config deno.json --allow-env ai-assistant/index.test.ts _shared/rateLimit.test.ts _shared/buildContext.test.ts _shared/errors.test.ts
 npx playwright test --config tests/e2e/playwright.config.ts
 cd apps/desktop/src-tauri && cargo check
 ```
