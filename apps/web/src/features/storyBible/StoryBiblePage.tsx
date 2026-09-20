@@ -4,7 +4,7 @@ import { Check, Plus, ScanSearch, Search, Trash2, X } from "lucide-react";
 import type { CharacterFields, StoryBibleEntry } from "@inkwell/shared-types";
 import { useProjectContext } from "../project/ProjectLayout";
 import { useAuth } from "../../lib/auth";
-import { db } from "../../lib/db";
+import { db, EMPTY_ARRAY } from "../../lib/db";
 import {
   createEntry,
   createRelationship,
@@ -67,17 +67,19 @@ export function StoryBiblePage() {
   const entries = useLiveQuery(
     () => db.storyBibleEntries.where("projectId").equals(project.id).and((e) => !e.deletedAt && e.entryType === activeType).toArray(),
     [project.id, activeType],
-  ) ?? [];
+    EMPTY_ARRAY,
+  );
 
   const allEntries = useLiveQuery(
     () => db.storyBibleEntries.where("projectId").equals(project.id).and((e) => !e.deletedAt).toArray(),
     [project.id],
-  ) ?? [];
+    EMPTY_ARRAY,
+  );
 
-  const relationships = useLiveQuery(() => db.relationships.where("projectId").equals(project.id).toArray(), [project.id]) ?? [];
+  const relationships = useLiveQuery(() => db.relationships.where("projectId").equals(project.id).toArray(), [project.id], EMPTY_ARRAY);
 
-  const scenes = useLiveQuery(() => db.scenes.where("projectId").equals(project.id).and((s) => !s.deletedAt).toArray(), [project.id]) ?? [];
-  const appearances = useLiveQuery(() => db.appearances.where("projectId").equals(project.id).toArray(), [project.id]) ?? [];
+  const scenes = useLiveQuery(() => db.scenes.where("projectId").equals(project.id).and((s) => !s.deletedAt).toArray(), [project.id], EMPTY_ARRAY);
+  const appearances = useLiveQuery(() => db.appearances.where("projectId").equals(project.id).toArray(), [project.id], EMPTY_ARRAY);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -146,3 +146,11 @@ export async function getOrCreateLocalUser(): Promise<LocalUser> {
 export function nowIso(): string {
   return new Date().toISOString();
 }
+
+/**
+ * A stable, shared "not loaded yet" default for `useLiveQuery(query, deps, EMPTY_ARRAY)` call
+ * sites, in place of the `useLiveQuery(...) ?? []` pattern — that pattern allocates a new array on
+ * every render while a query is still pending, which makes any effect/memo depending on the
+ * result see a "changed" array on every render even though it's conceptually the same empty list.
+ */
+export const EMPTY_ARRAY: never[] = [];

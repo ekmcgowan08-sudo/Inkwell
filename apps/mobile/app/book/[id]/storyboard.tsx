@@ -26,6 +26,7 @@ export default function StoryboardScreen() {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [column, setColumn] = useState("");
+  const [fieldsSyncedFor, setFieldsSyncedFor] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -39,17 +40,24 @@ export default function StoryboardScreen() {
     setRefreshing(false);
   }, [projectId]);
 
+  // Fetches on mount/projectId change — setState only happens after the await resolves, not
+  // synchronously in the effect body, so this is the standard React-docs "fetch on mount" pattern.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
   const selected = cards.find((c) => c.id === selectedId) ?? null;
 
-  useEffect(() => {
-    setTitle(selected?.title ?? "");
-    setSummary(selected?.summary ?? "");
-    setColumn(selected?.column ?? "");
-  }, [selected?.id]);
+  // Load the selected card's fields into the editable text-input state whenever selection
+  // changes — adjusted directly during render (React's documented pattern) rather than in an
+  // effect, since it's a pure sync from already-fetched data, not an external system.
+  if (selected && selected.id !== fieldsSyncedFor) {
+    setFieldsSyncedFor(selected.id);
+    setTitle(selected.title);
+    setSummary(selected.summary ?? "");
+    setColumn(selected.column);
+  }
 
   function scheduleSave(nextTitle: string, nextSummary: string, nextColumn: string) {
     if (!selected) return;

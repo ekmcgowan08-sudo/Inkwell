@@ -15,6 +15,7 @@
 | Playwright accessibility scan (axe-core) | `npx playwright test --config tests/e2e/playwright.config.ts tests/e2e/accessibility.spec.ts` | Runs `@axe-core/playwright` (WCAG 2.0/2.1 A+AA rule sets) against every core screen — dashboard, new-book dialog, manuscript editor, story bible, storyboard, timeline & goals, AI assistant, AI findings, versions & backups, exports, book settings | ✅ Browser, passing (0 violations, after two real fixes — see below) |
 | Desktop Rust compile | `cd apps/desktop/src-tauri && cargo check` | The Tauri 2 shell (menu, plugins, close guard) compiles cleanly against the real toolchain | ✅ Auto, passing, zero warnings |
 | Mobile typecheck | `pnpm --filter @inkwell/mobile typecheck` | The Expo Router app (login, Library, plain-text manuscript editor) typechecks against the real dependency graph — not run as an app (no Expo toolchain/simulator/device here) | ✅ Auto, passing (newly fixed this pass — see `docs/IMPLEMENTATION_STATUS.md` Phase 8/9) |
+| Lint | `pnpm lint` | Real ESLint flat config (`eslint.config.js`, repo root) across `apps/web`, `apps/mobile`, and every `packages/*` — TypeScript `no-unused-vars` plus `eslint-plugin-react-hooks`'s rules (`exhaustive-deps`, `set-state-in-effect`) for `apps/web`/`apps/mobile`. `pnpm lint` was completely broken before 2026-09-19 (see `docs/DECISIONS.md`): every package's `lint` script called `eslint` with no config file anywhere in the repo, and `eslint` wasn't even a declared dependency — it only "worked" by accident when a global install happened to be on `PATH`. Fixing it surfaced several real, previously-undetected bugs, most notably the manuscript editor's live word count silently not updating until the next autosave (~1.5s lag) rather than as the user typed. | ✅ Auto, passing, 0 warnings |
 
 ## What was NOT run, and why (be specific, don't hand-wave)
 
@@ -103,6 +104,7 @@ pnpm --filter @inkwell/ai-contracts test
 pnpm --filter @inkwell/web test
 pnpm --filter @inkwell/web typecheck
 pnpm --filter @inkwell/mobile typecheck
+pnpm lint
 pnpm test:rls                      # needs Docker (or RLS_TEST_BACKEND=local, see docs/DECISIONS.md)
 cd supabase/functions && deno test --config deno.json --allow-env ai-assistant/index.test.ts _shared/rateLimit.test.ts _shared/buildContext.test.ts _shared/errors.test.ts
 npx playwright test --config tests/e2e/playwright.config.ts

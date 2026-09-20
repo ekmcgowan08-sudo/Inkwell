@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type SyncConflict } from "../../lib/db";
+import { db, EMPTY_ARRAY, type SyncConflict } from "../../lib/db";
 import { resolveConflictKeepMine, resolveConflictKeepTheirs } from "../../lib/sync";
 import { Button } from "../ui/Button";
 import { Dialog } from "../ui/Dialog";
@@ -72,7 +72,7 @@ function ConflictCard({ conflict }: { conflict: SyncConflict }) {
 }
 
 export function SyncConflictsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const conflicts = useLiveQuery(() => db.syncConflicts.toArray(), []) ?? [];
+  const conflicts = useLiveQuery(() => db.syncConflicts.toArray(), [], EMPTY_ARRAY);
 
   return (
     <Dialog open={open} onClose={onClose} title="Sync conflicts">

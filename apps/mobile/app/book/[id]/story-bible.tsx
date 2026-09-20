@@ -32,6 +32,7 @@ export default function StoryBibleScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [summary, setSummary] = useState("");
+  const [fieldsSyncedFor, setFieldsSyncedFor] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -50,16 +51,23 @@ export default function StoryBibleScreen() {
     setRefreshing(false);
   }, [projectId]);
 
+  // Fetches on mount/projectId change — setState only happens after the await resolves, not
+  // synchronously in the effect body, so this is the standard React-docs "fetch on mount" pattern.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
   const selected = entries.find((e) => e.id === selectedId) ?? null;
 
-  useEffect(() => {
-    setName(selected?.name ?? "");
-    setSummary(selected?.summary ?? "");
-  }, [selected?.id]);
+  // Load the selected entry's fields into the editable text-input state whenever selection
+  // changes — adjusted directly during render (React's documented pattern) rather than in an
+  // effect, since it's a pure sync from already-fetched data, not an external system.
+  if (selected && selected.id !== fieldsSyncedFor) {
+    setFieldsSyncedFor(selected.id);
+    setName(selected.name);
+    setSummary(selected.summary ?? "");
+  }
 
   function scheduleSave(nextName: string, nextSummary: string) {
     if (!selected) return;

@@ -28,6 +28,12 @@ test provider. This is genuinely usable, not a degraded demo — every module wo
    to run them locally.
 6. Restart `pnpm --filter @inkwell/web dev` — the app now runs in cloud mode against your local Supabase
    stack: real auth, real Postgres persistence, real sync.
+7. Optional: sign up a dev account through the app, then `SEED_USER_EMAIL=you@example.com pnpm seed` populates
+   it with a fully-written sample project ("The Lighthouse Keeps" — the same content local-only mode's
+   onboarding seeds into IndexedDB) directly via `pg` against `DATABASE_URL` (defaults to the Supabase CLI's
+   standard local connection string). This is a trusted, local-dev-only script — it reads `auth.users`
+   directly and bypasses RLS by connecting as the Postgres superuser, which is fine on your own machine and
+   never something to point at a hosted project. See `scripts/seed.ts`.
 
 ## Deploying to a real (hosted) Supabase project
 

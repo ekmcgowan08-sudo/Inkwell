@@ -43,11 +43,10 @@ export function generateManuscriptFixture(chapterCount = 40, wordsPerChapter = 2
     lines.push(`# Chapter ${chapter}`, "");
     let wordsInChapter = 0;
     let wordsInParagraph = 0;
-    let sentence: string[] = [];
 
     while (wordsInChapter < wordsPerChapter) {
       const sentenceLength = 8 + Math.floor(rand() * 10);
-      sentence = [];
+      const sentence: string[] = [];
       for (let i = 0; i < sentenceLength; i++) sentence.push(WORD_BANK[Math.floor(rand() * WORD_BANK.length)]!);
       sentence[0] = capitalize(sentence[0]!);
       lines.push(sentence.join(" ") + ".");

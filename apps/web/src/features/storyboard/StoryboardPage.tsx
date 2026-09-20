@@ -5,7 +5,7 @@ import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useProjectContext } from "../project/ProjectLayout";
-import { db } from "../../lib/db";
+import { db, EMPTY_ARRAY } from "../../lib/db";
 import {
   createStoryboardCard,
   deleteStoryboardCard,
@@ -72,7 +72,7 @@ export function StoryboardPage() {
   const [overlay, setOverlay] = useState<keyof typeof OVERLAYS>("none");
   const [newColumnName, setNewColumnName] = useState("");
 
-  const cards = useLiveQuery(() => db.storyboardCards.where("projectId").equals(project.id).sortBy("sortOrder"), [project.id]) ?? [];
+  const cards = useLiveQuery(() => db.storyboardCards.where("projectId").equals(project.id).sortBy("sortOrder"), [project.id], EMPTY_ARRAY);
 
   const columns = useMemo(() => {
     const fromCards = Array.from(new Set(cards.map((c) => c.column)));

@@ -4,7 +4,7 @@ import { Copy, Send, Sparkles } from "lucide-react";
 import type { AIMode } from "@inkwell/shared-types";
 import { useProjectContext } from "../project/ProjectLayout";
 import { useAuth } from "../../lib/auth";
-import { db } from "../../lib/db";
+import { db, EMPTY_ARRAY } from "../../lib/db";
 import { askAssistant } from "../../lib/aiClient";
 import { useToast } from "../../components/ui/Toast";
 import { Button } from "../../components/ui/Button";
@@ -49,7 +49,8 @@ export function AIAssistantPage() {
   const messages = useLiveQuery(
     () => (conversationId ? db.aiMessages.where("conversationId").equals(conversationId).sortBy("createdAt") : []),
     [conversationId],
-  ) ?? [];
+    EMPTY_ARRAY,
+  );
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Download, Printer } from "lucide-react";
 import { useProjectContext } from "./ProjectLayout";
-import { db } from "../../lib/db";
+import { EMPTY_ARRAY } from "../../lib/db";
 import { listChapters, listScenes } from "../../lib/repos/manuscript";
 import { buildProjectBackup, downloadBlob, downloadJson, downloadText, exportDocx, exportEpub, exportMarkdown, exportPlainText } from "../../lib/exportProject";
 import { Button } from "../../components/ui/Button";
@@ -32,7 +32,7 @@ export function ExportsPage() {
       result.push({ title: c.title, scenes: scenes.map((s) => ({ title: s.title, plainText: s.plainText })) });
     }
     return result;
-  }, [printing, project.id]) ?? [];
+  }, [printing, project.id], EMPTY_ARRAY);
 
   async function withBusy(key: string, fn: () => Promise<void>) {
     setBusy(key);

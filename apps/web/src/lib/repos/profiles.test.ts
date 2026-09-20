@@ -14,7 +14,7 @@ vi.mock("../supabase", () => ({
   getSupabase: () => ({
     from: (table: string) => ({
       select: () => ({
-        eq: (_col: string, id: string) => ({
+        eq: (_col: string, _id: string) => ({
           maybeSingle: async () => ({ data: table === "profiles" ? state.profileRow : null }),
         }),
       }),

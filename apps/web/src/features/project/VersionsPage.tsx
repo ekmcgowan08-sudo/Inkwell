@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { History, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useProjectContext } from "./ProjectLayout";
-import { db, nowIso } from "../../lib/db";
+import { db, EMPTY_ARRAY, nowIso } from "../../lib/db";
 import { listChapters, listScenes, listRevisions, restoreRevision } from "../../lib/repos/manuscript";
 import { buildProjectBackup, downloadJson } from "../../lib/exportProject";
 import { Button } from "../../components/ui/Button";
@@ -16,14 +16,14 @@ export function VersionsPage() {
   const [snapshotName, setSnapshotName] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
 
-  const chapters = useLiveQuery(() => listChapters(project.id), [project.id]) ?? [];
+  const chapters = useLiveQuery(() => listChapters(project.id), [project.id], EMPTY_ARRAY);
   const effectiveChapterId = chapterId || chapters[0]?.id || "";
-  const scenes = useLiveQuery(() => (effectiveChapterId ? listScenes(effectiveChapterId) : []), [effectiveChapterId]) ?? [];
+  const scenes = useLiveQuery(() => (effectiveChapterId ? listScenes(effectiveChapterId) : []), [effectiveChapterId], EMPTY_ARRAY);
   const effectiveSceneId = sceneId || scenes[0]?.id || "";
-  const revisions = useLiveQuery(() => (effectiveSceneId ? listRevisions(effectiveSceneId) : []), [effectiveSceneId]) ?? [];
+  const revisions = useLiveQuery(() => (effectiveSceneId ? listRevisions(effectiveSceneId) : []), [effectiveSceneId], EMPTY_ARRAY);
 
-  const snapshots = useLiveQuery(() => db.namedSnapshots.where("projectId").equals(project.id).reverse().sortBy("createdAt"), [project.id]) ?? [];
-  const recoveryItems = useLiveQuery(() => db.deletedItems.where("projectId").equals(project.id).toArray(), [project.id]) ?? [];
+  const snapshots = useLiveQuery(() => db.namedSnapshots.where("projectId").equals(project.id).reverse().sortBy("createdAt"), [project.id], EMPTY_ARRAY);
+  const recoveryItems = useLiveQuery(() => db.deletedItems.where("projectId").equals(project.id).toArray(), [project.id], EMPTY_ARRAY);
 
   async function createSnapshot() {
     const backup = await buildProjectBackup(project.id);

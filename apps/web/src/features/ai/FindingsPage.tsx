@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { RefreshCw } from "lucide-react";
 import { useProjectContext } from "../project/ProjectLayout";
-import { db } from "../../lib/db";
+import { db, EMPTY_ARRAY } from "../../lib/db";
 import { runLocalConsistencyScan } from "../../lib/findingsScanner";
 import { Button } from "../../components/ui/Button";
 import { Badge, EmptyState } from "../../components/ui/Feedback";
@@ -14,7 +14,7 @@ export function FindingsPage() {
   const { project } = useProjectContext();
   const [scanning, setScanning] = useState(false);
 
-  const findings = useLiveQuery(() => db.aiFindings.where("projectId").equals(project.id).toArray(), [project.id]) ?? [];
+  const findings = useLiveQuery(() => db.aiFindings.where("projectId").equals(project.id).toArray(), [project.id], EMPTY_ARRAY);
   const open = findings.filter((f) => f.status === "open").sort((a, b) => b.confidence - a.confidence);
   const resolved = findings.filter((f) => f.status !== "open");
 

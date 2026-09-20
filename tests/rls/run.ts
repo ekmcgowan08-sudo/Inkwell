@@ -191,7 +191,7 @@ async function applySchema(client: Client) {
     try {
       await client.query(sql);
     } catch (err) {
-      throw new Error(`Migration ${file} failed: ${(err as Error).message}`);
+      throw new Error(`Migration ${file} failed: ${(err as Error).message}`, { cause: err });
     }
   }
 

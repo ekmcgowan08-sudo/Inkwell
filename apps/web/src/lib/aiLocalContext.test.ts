@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { db } from "./db";
 import { createProject, createSeries } from "./repos/projects";
-import { createChapter, autosaveScene, listChapters, listScenes } from "./repos/manuscript";
+import { autosaveScene, listChapters, listScenes } from "./repos/manuscript";
 import { createEntry } from "./repos/storyBible";
 import { buildLocalContext } from "./aiLocalContext";
 

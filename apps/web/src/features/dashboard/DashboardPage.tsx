@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate } from "react-router-dom";
 import { Clock, Flame, Grid, List, Plus, Search, Star, Upload } from "lucide-react";
 import { useAuth } from "../../lib/auth";
-import { db } from "../../lib/db";
+import { db, EMPTY_ARRAY } from "../../lib/db";
 import { AppShell, NavItem } from "../../components/layout/AppShell";
 import { Button, IconButton } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/Feedback";
@@ -61,7 +61,7 @@ export function DashboardPage() {
     return withCounts;
   }, [userId, showArchived]);
 
-  const series = useLiveQuery(async () => (userId ? db.series.where("userId").equals(userId).toArray() : []), [userId]) ?? [];
+  const series = useLiveQuery(async () => (userId ? db.series.where("userId").equals(userId).toArray() : []), [userId], EMPTY_ARRAY);
 
   const filtered = useMemo(() => {
     if (!projects) return [];

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -10,7 +10,7 @@ import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, GripVertical, Maximize2, Minimize2, Plus, Trash2 } from "lucide-react";
-import { db } from "../../lib/db";
+import { db, EMPTY_ARRAY } from "../../lib/db";
 import type { Chapter, Part } from "@inkwell/shared-types";
 import { useAuth } from "../../lib/auth";
 import { useProjectContext } from "../project/ProjectLayout";
@@ -119,6 +119,8 @@ export function ManuscriptPage() {
   const [newPartTitle, setNewPartTitle] = useState("");
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("saved");
+  const [sceneWordCount, setSceneWordCount] = useState(0);
+  const [wordCountSyncedSceneId, setWordCountSyncedSceneId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadingContent = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
@@ -138,21 +140,22 @@ export function ManuscriptPage() {
   const chapters = useLiveQuery(
     () => db.chapters.where("projectId").equals(project.id).and((c) => !c.deletedAt).sortBy("sortOrder"),
     [project.id],
-  ) ?? [];
+    EMPTY_ARRAY,
+  );
 
   const parts = useLiveQuery(
     () => db.parts.where("projectId").equals(project.id).and((p) => !p.deletedAt).sortBy("sortOrder"),
     [project.id],
-  ) ?? [];
+    EMPTY_ARRAY,
+  );
 
   const activeChapter = chapters.find((c) => c.id === chapterId) ?? chapters[0];
 
-  const scenes = useLiveQuery(() => (activeChapter ? listScenes(activeChapter.id) : []), [activeChapter?.id]) ?? [];
+  const scenes = useLiveQuery(() => (activeChapter ? listScenes(activeChapter.id) : []), [activeChapter?.id], EMPTY_ARRAY);
+  // Falls back to the chapter's first scene whenever activeSceneId doesn't match anything in the
+  // current scene list (initial load, or after a chapter switch) — no effect needed to "correct"
+  // activeSceneId itself, since it's never read anywhere except here.
   const activeScene = scenes.find((s) => s.id === activeSceneId) ?? scenes[0];
-
-  useEffect(() => {
-    if (scenes[0] && !scenes.find((s) => s.id === activeSceneId)) setActiveSceneId(scenes[0].id);
-  }, [scenes, activeSceneId]);
 
   useEffect(() => {
     if (!chapterId && chapters[0]) navigate(`/project/${project.id}/manuscript/${chapters[0].id}`, { replace: true });
@@ -169,6 +172,7 @@ export function ManuscriptPage() {
     content: activeScene?.content ?? "",
     onUpdate: ({ editor }) => {
       if (loadingContent.current) return;
+      setSceneWordCount(countWords(extractPlainText(editor.getJSON())));
       if (userId && !sessionIdRef.current) {
         startWritingSession(project.id, userId, wordCount).then((s) => {
           sessionIdRef.current = s.id;
@@ -211,13 +215,29 @@ export function ManuscriptPage() {
     };
   }, [project.id]);
 
-  // Swap editor content when the active scene changes (chapter switch, scene tab click).
+  // Swap editor content when the active scene changes (chapter switch, scene tab click) — an
+  // imperative call to Tiptap, so this has to stay an effect. Deliberately depends on
+  // activeScene?.id, not the whole activeScene object: activeScene.content is re-derived from
+  // Dexie on every autosave, and re-running this on every content change would reset the editor
+  // (fighting the user's cursor position and undo history) on every debounced save while they're
+  // still typing in it.
   useEffect(() => {
     if (!editor || !activeScene) return;
     loadingContent.current = true;
     editor.commands.setContent(activeScene.content ?? "");
     loadingContent.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, activeScene?.id]);
+
+  // Reset the displayed word count to the newly-active scene's own cached count whenever it
+  // changes (setContent above doesn't fire onUpdate, so without this the live-typing path would
+  // keep showing the *previous* scene's count until the next keystroke). Adjusted directly during
+  // render — React's documented pattern for this — rather than in an effect, since it doesn't
+  // touch anything outside React and avoids an extra render+commit cycle.
+  if (activeScene && activeScene.id !== wordCountSyncedSceneId) {
+    setWordCountSyncedSceneId(activeScene.id);
+    setSceneWordCount(activeScene.wordCount);
+  }
 
   // Flush any pending autosave immediately when navigating away.
   useEffect(() => {
@@ -225,8 +245,6 @@ export function ManuscriptPage() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [activeScene?.id]);
-
-  const sceneWordCount = useMemo(() => (editor ? countWords(extractPlainText(editor.getJSON())) : 0), [editor, activeScene?.content]);
 
   const flushNow = useCallback(async () => {
     if (!editor || !activeScene || loadingContent.current) return;

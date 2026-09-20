@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Clock, Plus, Target, Flame, Trash2, AlertTriangle } from "lucide-react";
 import { useProjectContext } from "../project/ProjectLayout";
 import { useAuth } from "../../lib/auth";
-import { db } from "../../lib/db";
+import { db, EMPTY_ARRAY } from "../../lib/db";
 import {
   createTimelineEvent,
   deleteTimelineEvent,
@@ -29,9 +29,9 @@ export function TimelineGoalsPage() {
   const [streak, setStreak] = useState(0);
   const [history, setHistory] = useState<{ date: string; wordsWritten: number; goalMet: boolean }[]>([]);
 
-  const events = useLiveQuery(() => db.timelineEvents.where("projectId").equals(project.id).sortBy("sortOrder"), [project.id]) ?? [];
+  const events = useLiveQuery(() => db.timelineEvents.where("projectId").equals(project.id).sortBy("sortOrder"), [project.id], EMPTY_ARRAY);
   const dailyGoal = useLiveQuery(() => getActiveDailyGoal(project.id), [project.id]);
-  const recentSessions = useLiveQuery(() => listRecentSessions(project.id, 5), [project.id]) ?? [];
+  const recentSessions = useLiveQuery(() => listRecentSessions(project.id, 5), [project.id], EMPTY_ARRAY);
   const conflicts = detectTimelineConflicts(events);
 
   useEffect(() => {

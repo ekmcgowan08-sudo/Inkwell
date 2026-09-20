@@ -33,7 +33,10 @@ export default function LibraryScreen() {
     if (!authLoading && !userId) router.replace("/login");
   }, [authLoading, userId, router]);
 
+  // Fetches on mount/userId change — setState only happens after the await resolves, not
+  // synchronously in the effect body, so this is the standard React-docs "fetch on mount" pattern.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 

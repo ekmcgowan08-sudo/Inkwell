@@ -25,6 +25,7 @@ export default function TimelineScreen() {
   const [label, setLabel] = useState("");
   const [whenLabel, setWhenLabel] = useState("");
   const [detail, setDetail] = useState("");
+  const [fieldsSyncedFor, setFieldsSyncedFor] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -38,17 +39,24 @@ export default function TimelineScreen() {
     setRefreshing(false);
   }, [projectId]);
 
+  // Fetches on mount/projectId change — setState only happens after the await resolves, not
+  // synchronously in the effect body, so this is the standard React-docs "fetch on mount" pattern.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
   const selected = events.find((e) => e.id === selectedId) ?? null;
 
-  useEffect(() => {
-    setLabel(selected?.label ?? "");
-    setWhenLabel(selected?.whenLabel ?? "");
-    setDetail(selected?.detail ?? "");
-  }, [selected?.id]);
+  // Load the selected event's fields into the editable text-input state whenever selection
+  // changes — adjusted directly during render (React's documented pattern) rather than in an
+  // effect, since it's a pure sync from already-fetched data, not an external system.
+  if (selected && selected.id !== fieldsSyncedFor) {
+    setFieldsSyncedFor(selected.id);
+    setLabel(selected.label);
+    setWhenLabel(selected.whenLabel);
+    setDetail(selected.detail ?? "");
+  }
 
   function scheduleSave(nextLabel: string, nextWhenLabel: string, nextDetail: string) {
     if (!selected) return;

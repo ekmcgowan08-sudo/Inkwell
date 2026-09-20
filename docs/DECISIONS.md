@@ -4,6 +4,75 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-19 — `pnpm lint` was completely broken; fixing it surfaced a real, previously-invisible bug (live word count silently lagging by a full autosave cycle)
+Every package's `lint` script called `eslint`, but there was no `eslint.config.js` anywhere in the repo and
+`eslint` wasn't even a declared dependency in any `package.json` — it only appeared to work in this sandbox
+because a global `eslint` install happened to be on `PATH`. On a clean machine or in CI, `pnpm lint` would
+fail immediately with "ESLint couldn't find an eslint.config.js file." CI's own job is even named
+`lint-typecheck-test` but never actually ran `pnpm lint` — so this had been silently broken for a while
+without a green CI badge ever catching it.
+
+Fixed properly rather than removing the dead scripts: added `eslint`, `typescript-eslint`, and
+`eslint-plugin-react-hooks` as real root devDependencies, and a root `eslint.config.js` (flat config) covering
+`apps/web`, `apps/mobile`, and every `packages/*` — `@typescript-eslint/recommended` plus
+`react-hooks`'s recommended rules for the two React apps. Excludes `supabase/functions` (Deno has its own
+linter, `deno lint`, and Deno's globals/import style don't fit a Node ESLint config) and
+`apps/desktop/src-tauri` (Rust, covered by `cargo check`). Wired into every package's `lint` script and into
+CI's `lint-typecheck-test` job, which finally does what its name says.
+
+Running it for the first time against the real codebase, rather than a token/empty pass, found real things:
+
+- **The headline bug**: `ManuscriptPage.tsx`'s "words this scene" counter was computed with
+  `useMemo(() => countWords(...), [editor, activeScene?.content])` — but the memo body reads
+  `editor.getJSON()`, not `activeScene.content`, and `activeScene.content` is a value from Dexie that only
+  updates *after* the debounced autosave writes it back (~1.5s later). `react-hooks/exhaustive-deps` flagged
+  the dependency as "unnecessary" since the callback doesn't read it, and chasing that mismatch (verified with
+  a real Playwright run, checking the DOM 300ms after typing — a length so short Playwright's own
+  auto-retrying assertions couldn't have papered over the gap the way the existing `smoke.spec.ts` assertion
+  incidentally did) confirmed the counter genuinely showed "0 words" immediately after typing five words, only
+  updating once autosave caught up. Nobody had noticed because the existing e2e assertion for this text used
+  `toContainText`, which polls for up to its default timeout — it happened to still pass, just not for the
+  reason it looked like it did. Fixed by tracking word count as real component state, updated live from
+  `onUpdate` (every keystroke) and reset to the scene's own cached `wordCount` on scene switch (adjusted
+  directly during render, not via a second effect — see below).
+- **The same "sync state from a prop in an effect" anti-pattern, four more times**: `App.tsx`'s
+  `RequireAuth` legal-acceptance gate, and three mobile detail-view screens
+  (`story-bible.tsx`/`storyboard.tsx`/`timeline.tsx`) all called `setState` synchronously inside a `useEffect`
+  purely to copy a derived value (the selected item's fields) into local editable state. `react-hooks/set-state-in-effect`
+  (a rule from the newer "React Compiler" rule family in `eslint-plugin-react-hooks`) flagged all of them.
+  Fixed each with React's own documented pattern — adjust the state directly during the render body, guarded
+  by comparing against a "synced for this id" tracker — which avoids both the lint violation and the extra
+  render+commit cycle an effect would cost.
+- **Real dead code**: an unused `db` import in `ExportsPage.tsx`, an unused `createChapter` import in a test
+  file, an unused `View` import in two mobile screens, and a genuinely-dead `let sentence: string[] = []`
+  initializer in `generateManuscriptFixture.ts` (always overwritten before being read).
+- **A lost error cause**: `tests/rls/run.ts` caught a migration failure and rethrew a new `Error` with just
+  the message text, discarding the original error's stack and any Postgres-specific detail (`code`/`hint`/
+  `position`). Fixed with `{ cause: err }`.
+- **Fifteen `useLiveQuery(...) ?? []` call sites**, across nearly every page component: this allocates a new
+  empty array on every render while a Dexie live query is still resolving, which makes any effect/memo
+  depending on the result see a "changed" dependency every single render even though it's conceptually the
+  same empty list. `dexie-react-hooks`'s `useLiveQuery` actually supports a third `defaultResult` argument for
+  exactly this; added a shared, stable `EMPTY_ARRAY` constant (`apps/web/src/lib/db.ts`) and switched every
+  call site to it.
+- **A second dangling script**: while auditing `package.json` scripts for other "declared but never wired up"
+  gaps in the same vein, found `"seed": "tsx scripts/seed.ts"` pointing at a file that had never been created
+  — `pnpm seed` failed with `ERR_MODULE_NOT_FOUND` for anyone who ran it. Wrote a real
+  `scripts/seed.ts` that seeds "The Lighthouse Keeps" (the same sample content local-only mode's onboarding
+  already seeds into IndexedDB) into a real Supabase Postgres database for an existing signed-up dev account,
+  connecting directly via `pg` (already a root devDependency, same approach `tests/rls/run.ts` uses) rather
+  than through PostgREST. Verified end to end against a real local Postgres carrying the RLS suite's
+  migrations + auth shim (created a user row, ran the script, confirmed the project/chapters/scenes/story-bible
+  entries/timeline events all landed correctly with real word counts) — not run against an actual
+  `supabase start` stack, since no Supabase CLI is installed in this sandbox.
+
+None of this changed what the product does for an author — every fix here is either a correctness bug no one
+had a way to notice (the word count), a cleaner/cheaper way to reach the identical rendered output (the
+render-time state adjustments, the stable empty array), or dead weight (unused imports, a broken script no
+one could have been relying on). Verified: full monorepo typecheck, `pnpm --filter @inkwell/web test` (54/54),
+`pnpm test:rls` (53/53), the full Playwright suite (smoke, performance, accessibility), and `pnpm lint` itself,
+all clean.
+
 ### 2026-09-19 — Found another false doc claim: `account-delete` had no unit tests despite the doc saying it did
 `docs/IMPLEMENTATION_STATUS.md` claimed "Deno Edge Function typecheck + unit tests (`ai-assistant`,
 `account-delete`) — real, passing," but only `ai-assistant/index.test.ts` existed; `account-delete` had zero

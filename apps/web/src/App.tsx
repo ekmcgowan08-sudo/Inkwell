@@ -24,19 +24,27 @@ import { BookSettingsPage } from "./features/project/BookSettingsPage";
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { userId, loading, isLocalOnly } = useAuth();
   const location = useLocation();
-  const [checkingLegal, setCheckingLegal] = useState(!isLocalOnly);
   const [needsLegalAcceptance, setNeedsLegalAcceptance] = useState(false);
+  // The userId this component has finished the legal-acceptance check for (or attempted to, for
+  // local-only/signed-out) — null until the first check completes for the current userId.
+  const [legalCheckedFor, setLegalCheckedFor] = useState<string | null | undefined>(undefined);
+
+  // No account, or local-only mode: nothing to check, always considered accepted. Derived
+  // directly during render (React's documented pattern for this) rather than via an effect with
+  // its own state, since it's a pure, synchronous function of props — no external system involved.
+  const checkingLegal = !isLocalOnly && !!userId && legalCheckedFor !== userId;
 
   useEffect(() => {
-    if (!userId || isLocalOnly) {
-      setCheckingLegal(false);
-      return;
-    }
-    setCheckingLegal(true);
+    if (!userId || isLocalOnly) return;
+    let cancelled = false;
     hasAcceptedLegalTerms(userId).then((accepted) => {
+      if (cancelled) return;
       setNeedsLegalAcceptance(!accepted);
-      setCheckingLegal(false);
+      setLegalCheckedFor(userId);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [userId, isLocalOnly]);
 
   if (loading || checkingLegal) {

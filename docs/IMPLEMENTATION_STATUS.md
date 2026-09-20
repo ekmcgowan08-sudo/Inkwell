@@ -36,7 +36,7 @@ Legend: ✅ done and verified · 🟡 real but partial · ⚪ scaffolded/designe
 
 ## Phase 3 — Local-first manuscript editor, autosave, sync, recovery
 ✅ Tiptap-based rich text editor: bold/italic/underline/blockquote/scene-break(hr)/text-align, undo/redo, Find & Replace (find-next + replace-all, scoped to the open scene).
-✅ Debounced autosave (1.5s idle) writing to IndexedDB first, bumping a per-scene `revision` counter and appending an append-only `document_revisions` row on every save — **not** a write per keystroke. **Verified: Auto** (`src/lib/repos/manuscript.test.ts`) and **Browser** (word count + "Saved" status confirmed live in Playwright).
+✅ Debounced autosave (1.5s idle) writing to IndexedDB first, bumping a per-scene `revision` counter and appending an append-only `document_revisions` row on every save — **not** a write per keystroke. **Verified: Auto** (`src/lib/repos/manuscript.test.ts`) and **Browser** ("Saved" status confirmed live in Playwright). The "words this scene" counter itself had a real, previously-unnoticed bug until 2026-09-19: it was memoized off `activeScene.content` (a Dexie value that only updates *after* autosave commits), not off the editor's own live content, so it silently lagged a full ~1.5s behind actual typing instead of updating per keystroke — found via `react-hooks/exhaustive-deps` once `pnpm lint` was fixed (see `docs/DECISIONS.md`), confirmed with a sub-300ms Playwright check that couldn't be masked by assertion auto-retry the way the existing e2e test's had been. Fixed to update from the editor's own `onUpdate` callback instead; now genuinely live, re-verified the same way.
 ✅ Version history UI: list revisions per scene, preview, restore (creates a *new* revision rather than rewriting history).
 🟡 Cloud sync: real code path exists (`src/lib/sync.ts` — best-effort push, retry queue in IndexedDB, online/offline listeners, periodic flush), with per-row optimistic concurrency via the `revision` column now actually enforced: `pushUpsert` does a revision-gated conditional update, not a plain `upsert()`, and a losing write is recorded (never silently dropped) and surfaced to the author via `SyncStatusPill` → `SyncConflictsDialog` with a "keep mine / keep theirs" choice. **Verified: Auto** (`src/lib/sync.test.ts` exercises gating, conflict recording, and both resolution paths against a mocked Supabase client). **Not verified against a live Supabase project with two real devices** (no project deployed in this environment) — see `docs/SYNC_AND_CONFLICTS.md` for exactly what is and isn't proven.
 ✅ Focus mode, live word/page/reading-time estimates, chapter/scene add-rename-delete(soft), multi-scene-per-chapter model.
@@ -131,7 +131,16 @@ duplicated verbatim from `ai-assistant/index.ts` rather than shared. Extracted t
 still isn't unit-tested — it isn't dependency-injected, so testing it would mean either refactoring for that
 or a live Supabase project, neither done here — but it typechecks against the real dependency graph and is
 code-reviewed.
-✅ Full-stack CI workflow written (`.github/workflows/ci.yml`): typecheck/unit-tests/build/secret-scan, the RLS
+✅ ESLint (`pnpm lint`). Was completely broken before 2026-09-19: no `eslint.config.js` existed anywhere in the
+repo and `eslint` wasn't a declared dependency of any package, so every `lint` script failed everywhere except
+by the accident of a global `eslint` install being on `PATH` — and CI's `lint-typecheck-test` job never
+actually called `pnpm lint`, so this went uncaught. Fixed with a real root `eslint.config.js` (flat config:
+`typescript-eslint` recommended + `eslint-plugin-react-hooks` recommended for `apps/web`/`apps/mobile`), wired
+into every package's `lint` script and into CI. Running it for real (not a token pass) found and fixed several
+genuine bugs, most notably the manuscript editor's live word count silently lagging behind actual typing by a
+full autosave cycle — see Phase 3 above and `docs/DECISIONS.md` (2026-09-19) for the full list. **Verified:
+Auto**, 0 errors/warnings across the whole workspace.
+✅ Full-stack CI workflow written (`.github/workflows/ci.yml`): typecheck/lint/unit-tests/build/secret-scan, the RLS
 suite (Docker-based, as CI runners have a real daemon unlike this sandbox), Deno function typecheck+tests, the
 Playwright e2e suite, and a Rust `cargo check` job with the exact Tauri Linux dependencies this repo verified
 work. **Not run on an actual GitHub Actions runner** in this pass — YAML-validated and modeled directly on the

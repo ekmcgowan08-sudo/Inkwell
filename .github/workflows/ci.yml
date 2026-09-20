@@ -31,6 +31,9 @@ jobs:
           pnpm --filter @inkwell/web typecheck
           pnpm --filter @inkwell/mobile typecheck
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Unit tests
         run: |
           pnpm --filter @inkwell/shared-types test
