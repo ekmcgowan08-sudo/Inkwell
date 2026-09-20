@@ -5,17 +5,17 @@ Owner of this decision: Claude Code, acting under the autonomous-execution brief
 
 ## 1. Decision
 
-| Layer | Choice |
-|---|---|
-| Shared frontend (web, and the view inside desktop) | **React 18 + TypeScript, built with Vite** |
-| Desktop packaging (macOS, Windows) | **Tauri 2**, wrapping the same web build |
-| Mobile packaging (iOS, Android) | **Expo (React Native), SDK 51+, using Expo Router** — not Tauri |
-| Backend | **Supabase**: Postgres, Auth, Storage, Edge Functions (Deno) |
-| Database access control | **Postgres Row Level Security** on every user-owned table, no privileged key in any client |
-| AI provider | **Anthropic Messages API**, called only from a Supabase Edge Function |
-| Local-first persistence | **IndexedDB (via Dexie)** in the browser/desktop webview, **SQLite (via expo-sqlite)** on mobile, both behind one shared sync-queue contract |
-| Shared logic | `packages/shared-types`, `packages/ai-contracts`, `packages/design-tokens`, `packages/api-client` — consumed by web, desktop, and mobile alike |
-| Monorepo tooling | pnpm workspaces (no Turborepo/Nx — the graph is small enough that extra build-orchestration tooling isn't earning its complexity yet) |
+| Layer                                              | Choice                                                                                                                                         |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared frontend (web, and the view inside desktop) | **React 18 + TypeScript, built with Vite**                                                                                                     |
+| Desktop packaging (macOS, Windows)                 | **Tauri 2**, wrapping the same web build                                                                                                       |
+| Mobile packaging (iOS, Android)                    | **Expo (React Native), SDK 51+, using Expo Router** — not Tauri                                                                                |
+| Backend                                            | **Supabase**: Postgres, Auth, Storage, Edge Functions (Deno)                                                                                   |
+| Database access control                            | **Postgres Row Level Security** on every user-owned table, no privileged key in any client                                                     |
+| AI provider                                        | **Anthropic Messages API**, called only from a Supabase Edge Function                                                                          |
+| Local-first persistence                            | **IndexedDB (via Dexie)** in the browser/desktop webview, **SQLite (via expo-sqlite)** on mobile, both behind one shared sync-queue contract   |
+| Shared logic                                       | `packages/shared-types`, `packages/ai-contracts`, `packages/design-tokens`, `packages/api-client` — consumed by web, desktop, and mobile alike |
+| Monorepo tooling                                   | pnpm workspaces (no Turborepo/Nx — the graph is small enough that extra build-orchestration tooling isn't earning its complexity yet)          |
 
 This resolves the handoff doc's open question ("web vs. native from day one") by doing **both from one codebase**, per the updated requirement that Inkwell ship on iPhone, iPad, Android, macOS, Windows, and the browser.
 
@@ -56,6 +56,7 @@ Full design in `docs/EDITOR_AND_AUTOSAVE.md` and `docs/SYNC_AND_CONFLICTS.md`.
 ## 5. AI architecture summary
 
 All Anthropic calls happen in a single Supabase Edge Function (`supabase/functions/ai-assistant`). It:
+
 1. Authenticates the caller's Supabase JWT and re-checks project ownership server-side (never trusts a client-supplied project id alone).
 2. Builds a bounded context (chapter summaries, approved canon facts, retrieved chunks via Postgres full-text search, recent chat turns) instead of the whole manuscript.
 3. Calls Anthropic with a configurable model id read from an environment variable, never hardcoded.

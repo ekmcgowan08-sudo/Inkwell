@@ -11,9 +11,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   { variant = "primary", size = "md", className = "", ...props },
   ref,
 ) {
-  const classes = ["iw-btn", `iw-btn-${variant}`, size === "sm" ? "iw-btn-sm" : "", className]
-    .filter(Boolean)
-    .join(" ");
+  const classes = ["iw-btn", `iw-btn-${variant}`, size === "sm" ? "iw-btn-sm" : "", className].filter(Boolean).join(" ");
   return <button ref={ref} className={classes} {...props} />;
 });
 

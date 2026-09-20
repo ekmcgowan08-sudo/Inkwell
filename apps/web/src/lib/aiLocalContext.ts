@@ -8,31 +8,52 @@ import { db } from "./db";
  * the server-side version this only ever contributes chapter summaries and story bible entries.
  */
 async function buildLocalSeriesContext(seriesId: string, excludeProjectId: string) {
-  const siblings = (await db.projects.where("seriesId").equals(seriesId).and((p) => p.id !== excludeProjectId && p.status === "active").toArray()).slice(
-    0,
-    MAX_SERIES_BOOKS,
-  );
+  const siblings = (
+    await db.projects
+      .where("seriesId")
+      .equals(seriesId)
+      .and((p) => p.id !== excludeProjectId && p.status === "active")
+      .toArray()
+  ).slice(0, MAX_SERIES_BOOKS);
 
   const chapterSummaries: ContextBundle["chapterSummaries"] = [];
   const storyBibleDigest: ContextBundle["storyBibleDigest"] = [];
 
   for (const book of siblings) {
     const prefix = `[${book.title}] `;
-    const bookChapters = (await db.chapters.where("projectId").equals(book.id).and((c) => !c.deletedAt).sortBy("sortOrder")).slice(
-      0,
-      MAX_SERIES_CHAPTERS_PER_BOOK,
-    );
-    const bookScenes = await db.scenes.where("projectId").equals(book.id).and((s) => !s.deletedAt).toArray();
+    const bookChapters = (
+      await db.chapters
+        .where("projectId")
+        .equals(book.id)
+        .and((c) => !c.deletedAt)
+        .sortBy("sortOrder")
+    ).slice(0, MAX_SERIES_CHAPTERS_PER_BOOK);
+    const bookScenes = await db.scenes
+      .where("projectId")
+      .equals(book.id)
+      .and((s) => !s.deletedAt)
+      .toArray();
     for (const c of bookChapters) {
-      const text = bookScenes.filter((s) => s.chapterId === c.id).map((s) => s.plainText).join(" ");
+      const text = bookScenes
+        .filter((s) => s.chapterId === c.id)
+        .map((s) => s.plainText)
+        .join(" ");
       chapterSummaries.push({ chapterId: c.id, title: `${prefix}${c.title}`, summary: text.slice(0, 400) || "(no content yet)" });
     }
-    const bookEntries = (await db.storyBibleEntries.where("projectId").equals(book.id).and((e) => !e.deletedAt).toArray()).slice(
-      0,
-      MAX_SERIES_STORY_BIBLE_PER_BOOK,
-    );
+    const bookEntries = (
+      await db.storyBibleEntries
+        .where("projectId")
+        .equals(book.id)
+        .and((e) => !e.deletedAt)
+        .toArray()
+    ).slice(0, MAX_SERIES_STORY_BIBLE_PER_BOOK);
     for (const e of bookEntries) {
-      storyBibleDigest.push({ id: e.id, name: `${prefix}${e.name}`, entryType: e.entryType, digest: e.summary ?? JSON.stringify(e.fields).slice(0, 200) });
+      storyBibleDigest.push({
+        id: e.id,
+        name: `${prefix}${e.name}`,
+        entryType: e.entryType,
+        digest: e.summary ?? JSON.stringify(e.fields).slice(0, 200),
+      });
     }
   }
 
@@ -49,10 +70,26 @@ async function buildLocalSeriesContext(seriesId: string, excludeProjectId: strin
  */
 export async function buildLocalContext(projectId: string, seriesScope = false): Promise<ContextBundle> {
   const project = await db.projects.get(projectId);
-  const chapters = await db.chapters.where("projectId").equals(projectId).and((c) => !c.deletedAt).sortBy("sortOrder");
-  const scenesByChapter = await db.scenes.where("projectId").equals(projectId).and((s) => !s.deletedAt).toArray();
-  const entries = await db.storyBibleEntries.where("projectId").equals(projectId).and((e) => !e.deletedAt).toArray();
-  const threads = await db.storyThreads.where("projectId").equals(projectId).and((t) => t.status === "open").toArray();
+  const chapters = await db.chapters
+    .where("projectId")
+    .equals(projectId)
+    .and((c) => !c.deletedAt)
+    .sortBy("sortOrder");
+  const scenesByChapter = await db.scenes
+    .where("projectId")
+    .equals(projectId)
+    .and((s) => !s.deletedAt)
+    .toArray();
+  const entries = await db.storyBibleEntries
+    .where("projectId")
+    .equals(projectId)
+    .and((e) => !e.deletedAt)
+    .toArray();
+  const threads = await db.storyThreads
+    .where("projectId")
+    .equals(projectId)
+    .and((t) => t.status === "open")
+    .toArray();
   const events = await db.timelineEvents.where("projectId").equals(projectId).sortBy("sortOrder");
 
   const chapterSummaries = chapters.map((c) => {
@@ -64,7 +101,12 @@ export async function buildLocalContext(projectId: string, seriesScope = false):
   const retrievedChunks = scenesByChapter
     .filter((s) => s.plainText.trim().length > 0)
     .slice(0, 12)
-    .map((s) => ({ sourceType: "scene", sourceId: s.id, label: chapters.find((c) => c.id === s.chapterId)?.title ?? s.title, content: s.plainText.slice(0, 800) }));
+    .map((s) => ({
+      sourceType: "scene",
+      sourceId: s.id,
+      label: chapters.find((c) => c.id === s.chapterId)?.title ?? s.title,
+      content: s.plainText.slice(0, 800),
+    }));
 
   const seriesContext =
     seriesScope && project?.seriesId ? await buildLocalSeriesContext(project.seriesId, projectId) : { chapterSummaries: [], storyBibleDigest: [] };

@@ -32,11 +32,7 @@ function makeQuery(responder: TableResponse) {
   return chain;
 }
 
-function makeFakeClient(opts: {
-  tables?: Record<string, TableResponse>;
-  rpc?: Record<string, Resp>;
-  rpcCalls?: string[];
-}): SupabaseClient {
+function makeFakeClient(opts: { tables?: Record<string, TableResponse>; rpc?: Record<string, Resp>; rpcCalls?: string[] }): SupabaseClient {
   const tables = opts.tables ?? {};
   const rpcResponses = opts.rpc ?? {};
   return {
@@ -136,7 +132,8 @@ function seriesAwareTables(): Record<string, TableResponse> {
     },
     story_bible_entries: (filters) => {
       const projectId = filters.find((f) => f.col === "project_id")?.val;
-      if (projectId === "p2") return { data: [{ id: "e-p2", name: "Book Two Character", entry_type: "character", summary: null, fields: {} }], error: null };
+      if (projectId === "p2")
+        return { data: [{ id: "e-p2", name: "Book Two Character", entry_type: "character", summary: null, fields: {} }], error: null };
       return { data: [], error: null };
     },
     projects: SIBLING_PROJECTS,

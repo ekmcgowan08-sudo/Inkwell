@@ -46,12 +46,18 @@ export function LoginPage() {
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to your writing studio">
       {isLocalOnly && (
-        <p className="iw-auth-banner">
-          No backend is configured for this build — running in local-only mode. Your work stays in this browser only.
-        </p>
+        <p className="iw-auth-banner">No backend is configured for this build — running in local-only mode. Your work stays in this browser only.</p>
       )}
       <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <TextField label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLocalOnly} />
+        <TextField
+          label="Email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={isLocalOnly}
+        />
         <TextField
           label="Password"
           type="password"
@@ -61,7 +67,11 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           disabled={isLocalOnly}
         />
-        {error && <p className="iw-field-error" role="alert">{error}</p>}
+        {error && (
+          <p className="iw-field-error" role="alert">
+            {error}
+          </p>
+        )}
         <Button type="submit" disabled={loading || isLocalOnly}>
           {loading ? "Signing in…" : "Sign in"}
         </Button>
@@ -98,7 +108,9 @@ export function SignupPage() {
   if (sentVerification) {
     return (
       <AuthShell title="Check your inbox">
-        <p>We sent a verification link to <strong>{email}</strong>. Click it to finish creating your account.</p>
+        <p>
+          We sent a verification link to <strong>{email}</strong>. Click it to finish creating your account.
+        </p>
         <Link to="/login">Back to sign in</Link>
       </AuthShell>
     );
@@ -107,12 +119,18 @@ export function SignupPage() {
   return (
     <AuthShell title="Create your account" subtitle="Your manuscripts, story bible, and AI memory in one place">
       {isLocalOnly && (
-        <p className="iw-auth-banner">
-          No backend is configured for this build — running in local-only mode, single device, no account needed.
-        </p>
+        <p className="iw-auth-banner">No backend is configured for this build — running in local-only mode, single device, no account needed.</p>
       )}
       <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <TextField label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLocalOnly} />
+        <TextField
+          label="Email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={isLocalOnly}
+        />
         <TextField
           label="Password"
           type="password"
@@ -124,10 +142,14 @@ export function SignupPage() {
           hint="At least 8 characters."
           disabled={isLocalOnly}
         />
-        {error && <p className="iw-field-error" role="alert">{error}</p>}
+        {error && (
+          <p className="iw-field-error" role="alert">
+            {error}
+          </p>
+        )}
         <p className="iw-help-text">
-          You'll be asked to review and agree to Inkwell's Terms of Service and Privacy Policy (drafts in{" "}
-          <code>docs/legal/</code>, pending professional review) on the next screen.
+          You'll be asked to review and agree to Inkwell's Terms of Service and Privacy Policy (drafts in <code>docs/legal/</code>, pending
+          professional review) on the next screen.
         </p>
         <Button type="submit" disabled={loading || isLocalOnly}>
           {loading ? "Creating account…" : "Create account"}
@@ -167,7 +189,11 @@ export function ForgotPasswordPage() {
       {isLocalOnly && <p className="iw-auth-banner">Not available in local-only mode — there's no account to reset.</p>}
       <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <TextField label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLocalOnly} />
-        {error && <p className="iw-field-error" role="alert">{error}</p>}
+        {error && (
+          <p className="iw-field-error" role="alert">
+            {error}
+          </p>
+        )}
         <Button type="submit" disabled={isLocalOnly}>
           Send reset link
         </Button>
@@ -200,7 +226,11 @@ export function ResetPasswordPage() {
     <AuthShell title="Choose a new password">
       <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <TextField label="New password" type="password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
-        {error && <p className="iw-field-error" role="alert">{error}</p>}
+        {error && (
+          <p className="iw-field-error" role="alert">
+            {error}
+          </p>
+        )}
         {done && <p role="status">Password updated. Redirecting…</p>}
         <Button type="submit">Update password</Button>
       </form>

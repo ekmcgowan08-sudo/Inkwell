@@ -148,14 +148,7 @@ export type Scene = z.infer<typeof sceneSchema>;
 // Story Bible
 // ---------------------------------------------------------------------------
 
-export const storyBibleEntryTypeSchema = z.enum([
-  "character",
-  "location",
-  "lore",
-  "object",
-  "organization",
-  "custom",
-]);
+export const storyBibleEntryTypeSchema = z.enum(["character", "location", "lore", "object", "organization", "custom"]);
 
 export const canonStatusSchema = z.enum(["canon", "draft", "speculative"]);
 

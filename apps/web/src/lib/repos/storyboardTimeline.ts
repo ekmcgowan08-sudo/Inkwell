@@ -142,7 +142,11 @@ export function detectTimelineConflicts(events: TimelineEvent[]): Map<string, st
 // ---- Goals & progress ----
 
 export async function getActiveDailyGoal(projectId: string): Promise<Goal | undefined> {
-  const goals = await db.goals.where("projectId").equals(projectId).and((g) => g.kind === "daily" && g.active).toArray();
+  const goals = await db.goals
+    .where("projectId")
+    .equals(projectId)
+    .and((g) => g.kind === "daily" && g.active)
+    .toArray();
   return goals[0];
 }
 
@@ -226,7 +230,11 @@ export async function recordWordsWrittenToday(projectId: string, userId: string,
   const goal = await getActiveDailyGoal(projectId);
   const goalMet = goal ? wordsWritten >= goal.targetWords : false;
 
-  const existing = await db.dailyProgress.where("projectId").equals(projectId).and((d) => d.date === date).first();
+  const existing = await db.dailyProgress
+    .where("projectId")
+    .equals(projectId)
+    .and((d) => d.date === date)
+    .first();
   const row: DailyProgress = existing
     ? { ...existing, wordsWritten, goalMet }
     : { id: crypto.randomUUID(), projectId, userId, date, wordsWritten, goalMet };
@@ -245,7 +253,11 @@ export async function recordWordsWrittenToday(projectId: string, userId: string,
 export async function getStreak(projectId: string): Promise<number> {
   const goal = await getActiveDailyGoal(projectId);
   const restDays = new Set(goal?.restDays ?? []);
-  const rows = await db.dailyProgress.where("projectId").equals(projectId).and((d) => d.goalMet).sortBy("date");
+  const rows = await db.dailyProgress
+    .where("projectId")
+    .equals(projectId)
+    .and((d) => d.goalMet)
+    .sortBy("date");
   if (rows.length === 0) return 0;
   let streak = 1;
   for (let i = rows.length - 1; i > 0; i--) {

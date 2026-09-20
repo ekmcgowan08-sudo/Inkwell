@@ -94,7 +94,7 @@ crash recovery, and even the owning author can't rewrite it.
 ## What's intentionally NOT in Postgres
 
 - OAuth tokens for Drive/Dropbox/OneDrive — `integration_connections` stores
-  connection *status* and a human-readable label only; real tokens belong in
+  connection _status_ and a human-readable label only; real tokens belong in
   Supabase Vault or the Edge Function's own secret store (see
   `docs/SECURITY.md`).
 - The Anthropic API key and system-prompt internals — configuration only

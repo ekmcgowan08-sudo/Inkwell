@@ -8,30 +8,13 @@ export function Badge({ children, tone = "default" }: { children: ReactNode; ton
 export function ProgressBar({ value, max, label }: { value: number; max: number; label?: string }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
-    <div
-      className="iw-progress"
-      role="progressbar"
-      aria-valuenow={pct}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={label}
-    >
+    <div className="iw-progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
       <div className="iw-progress-fill" style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-}: {
-  icon?: ReactNode;
-  title: string;
-  description?: string;
-  action?: ReactNode;
-}) {
+export function EmptyState({ icon, title, description, action }: { icon?: ReactNode; title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="iw-empty">
       {icon}
@@ -54,13 +37,7 @@ export function AIThinking({ label = "Reading the manuscript…" }: { label?: st
   );
 }
 
-export function SyncStatusPill({
-  status,
-  onClick,
-}: {
-  status: "synced" | "syncing" | "offline" | "error" | "conflict";
-  onClick?: () => void;
-}) {
+export function SyncStatusPill({ status, onClick }: { status: "synced" | "syncing" | "offline" | "error" | "conflict"; onClick?: () => void }) {
   const label = {
     synced: "Saved",
     syncing: "Saving…",

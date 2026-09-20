@@ -56,12 +56,14 @@ npx playwright test --config tests/e2e/playwright.config.ts   # e2e smoke test
 ```
 
 ### RLS tests without a Docker daemon
+
 Some sandboxed environments have a `docker` client but no running daemon. `tests/rls/run.ts` falls back to a
 locally-installed Postgres server when `RLS_TEST_BACKEND=local` is set (needs `postgresql` + `psql` on PATH,
 listening on 5432 with a `postgres`/`postgres` superuser). CI and normal dev machines should just use the
 Docker default. Don't "fix" this by weakening the test — see `docs/DECISIONS.md` for why both paths exist.
 
 ### Playwright browser path
+
 If `/opt/pw-browsers/chromium` doesn't exist in your environment, either run `npx playwright install chromium`
 normally, or set `PLAYWRIGHT_CHROMIUM_PATH` before running the e2e config.
 

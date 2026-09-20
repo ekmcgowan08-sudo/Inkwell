@@ -41,10 +41,10 @@ revision-gated conditional write, not a plain `upsert()`:
    (`apps/web/src/components/sync/SyncConflictsDialog.tsx`), which shows the fields that actually differ
    between "this device" and "the other device" and offers **Keep this device's version** or **Keep the
    other version**.
-   - *Keep mine* (`resolveConflictKeepMine`) re-pushes the local row one revision past the server's current
+   - _Keep mine_ (`resolveConflictKeepMine`) re-pushes the local row one revision past the server's current
      revision (so the gated write succeeds this time) and updates the local Dexie copy's revision to match,
      so the next local edit stays correctly numbered.
-   - *Keep theirs* (`resolveConflictKeepTheirs`) overwrites the local Dexie row with the server's version and
+   - _Keep theirs_ (`resolveConflictKeepTheirs`) overwrites the local Dexie row with the server's version and
      drops the now-superseded queued write.
 5. `flushSyncQueue` runs the same gated logic for queued retries, so a conflict discovered on reconnect is
    recorded exactly the same way as one discovered on a live push.

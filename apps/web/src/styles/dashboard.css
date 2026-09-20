@@ -21,7 +21,9 @@
 .iw-project-card {
   padding: 20px 22px;
   cursor: pointer;
-  transition: transform var(--motion-fast) var(--motion-easing), border-color var(--motion-fast);
+  transition:
+    transform var(--motion-fast) var(--motion-easing),
+    border-color var(--motion-fast);
   position: relative;
 }
 .iw-project-card:hover {

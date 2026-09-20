@@ -12,14 +12,8 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: darkTheme.bgElevated, borderTopColor: darkTheme.border },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{ title: "Library", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>📚</Text> }}
-      />
-      <Tabs.Screen
-        name="account"
-        options={{ title: "Account", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⚙️</Text> }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Library", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>📚</Text> }} />
+      <Tabs.Screen name="account" options={{ title: "Account", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⚙️</Text> }} />
     </Tabs>
   );
 }

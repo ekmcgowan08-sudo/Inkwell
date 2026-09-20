@@ -6,12 +6,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import { useProjectContext } from "../project/ProjectLayout";
 import { db, EMPTY_ARRAY } from "../../lib/db";
-import {
-  createStoryboardCard,
-  deleteStoryboardCard,
-  reorderStoryboardCards,
-  updateStoryboardCard,
-} from "../../lib/repos/storyboardTimeline";
+import { createStoryboardCard, deleteStoryboardCard, reorderStoryboardCards, updateStoryboardCard } from "../../lib/repos/storyboardTimeline";
 import { Button, IconButton } from "../../components/ui/Button";
 import { SelectField } from "../../components/ui/FormControls";
 import type { StoryboardCard } from "@inkwell/shared-types";
@@ -20,7 +15,18 @@ import "../../styles/storyboard.css";
 const OVERLAYS = {
   none: null,
   three_act: ["Act 1 — Setup", "Act 2 — Confrontation", "Act 3 — Resolution"],
-  save_the_cat: ["Opening Image", "Setup", "Catalyst", "Debate", "Break into Two", "Fun and Games", "Midpoint", "Bad Guys Close In", "All Is Lost", "Finale"],
+  save_the_cat: [
+    "Opening Image",
+    "Setup",
+    "Catalyst",
+    "Debate",
+    "Break into Two",
+    "Fun and Games",
+    "Midpoint",
+    "Bad Guys Close In",
+    "All Is Lost",
+    "Finale",
+  ],
   heros_journey: ["Ordinary World", "Call to Adventure", "Trials", "Ordeal", "Reward", "The Road Back", "Resurrection", "Return"],
 } as const;
 
@@ -40,10 +46,23 @@ function SortableCard({ card, onMoveColumn, columns }: { card: StoryboardCard; o
         onChange={(e) => updateStoryboardCard(card.id, { summary: e.target.value })}
         placeholder="One-line summary…"
         rows={2}
-        style={{ width: "100%", background: "transparent", border: "none", color: "var(--color-text-secondary)", fontSize: "0.8125rem", resize: "none", outline: "none", marginTop: 4 }}
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          color: "var(--color-text-secondary)",
+          fontSize: "0.8125rem",
+          resize: "none",
+          outline: "none",
+          marginTop: 4,
+        }}
       />
       <div className="iw-board-card-actions">
-        <button {...listeners} aria-label="Drag to reorder" style={{ cursor: "grab", background: "none", border: "none", color: "var(--color-text-secondary)", fontSize: 11 }}>
+        <button
+          {...listeners}
+          aria-label="Drag to reorder"
+          style={{ cursor: "grab", background: "none", border: "none", color: "var(--color-text-secondary)", fontSize: 11 }}
+        >
           ⠿ drag
         </button>
         <select
@@ -111,7 +130,12 @@ export function StoryboardPage() {
       <p className="iw-page-subtitle">Scene cards, grouped and reordered however fits how you plan.</p>
 
       <div className="iw-overlay-banner">
-        <SelectField label="Structure overlay (optional reference only)" value={overlay} onChange={(e) => setOverlay(e.target.value as keyof typeof OVERLAYS)} style={{ minWidth: 240 }}>
+        <SelectField
+          label="Structure overlay (optional reference only)"
+          value={overlay}
+          onChange={(e) => setOverlay(e.target.value as keyof typeof OVERLAYS)}
+          style={{ minWidth: 240 }}
+        >
           <option value="none">None</option>
           <option value="three_act">Three-Act Structure</option>
           <option value="save_the_cat">Save the Cat</option>
@@ -133,7 +157,11 @@ export function StoryboardPage() {
               <SortableContext items={cardsInColumn(col).map((c) => c.id)} strategy={verticalListSortingStrategy}>
                 {cardsInColumn(col).map((card, i) => (
                   <div key={card.id} style={{ position: "relative" }}>
-                    <SortableCard card={card} columns={columns} onMoveColumn={(newCol) => updateStoryboardCard(card.id, { column: newCol, sortOrder: cardsInColumn(newCol).length })} />
+                    <SortableCard
+                      card={card}
+                      columns={columns}
+                      onMoveColumn={(newCol) => updateStoryboardCard(card.id, { column: newCol, sortOrder: cardsInColumn(newCol).length })}
+                    />
                     <div style={{ display: "flex", gap: 2, position: "absolute", top: 8, right: 8 }}>
                       <IconButton label="Move up" onClick={() => moveByKeyboard(card, -1)} disabled={i === 0}>
                         <ArrowUp size={12} />

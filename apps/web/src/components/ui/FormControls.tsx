@@ -40,9 +40,7 @@ export function TextField({
 }: { label: string; hint?: string; error?: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <FieldWrapper label={label} hint={hint} error={error}>
-      {(id, describedBy) => (
-        <input id={id} className="iw-input" aria-describedby={describedBy} aria-invalid={!!error} {...props} />
-      )}
+      {(id, describedBy) => <input id={id} className="iw-input" aria-describedby={describedBy} aria-invalid={!!error} {...props} />}
     </FieldWrapper>
   );
 }
@@ -55,9 +53,7 @@ export function TextAreaField({
 }: { label: string; hint?: string; error?: string } & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <FieldWrapper label={label} hint={hint} error={error}>
-      {(id, describedBy) => (
-        <textarea id={id} className="iw-textarea" aria-describedby={describedBy} aria-invalid={!!error} {...props} />
-      )}
+      {(id, describedBy) => <textarea id={id} className="iw-textarea" aria-describedby={describedBy} aria-invalid={!!error} {...props} />}
     </FieldWrapper>
   );
 }

@@ -37,7 +37,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          tiptap: ["@tiptap/react", "@tiptap/starter-kit", "@tiptap/extension-underline", "@tiptap/extension-text-align", "@tiptap/extension-placeholder"],
+          tiptap: [
+            "@tiptap/react",
+            "@tiptap/starter-kit",
+            "@tiptap/extension-underline",
+            "@tiptap/extension-text-align",
+            "@tiptap/extension-placeholder",
+          ],
           dnd: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
           docx: ["docx"],
           supabase: ["@supabase/supabase-js"],

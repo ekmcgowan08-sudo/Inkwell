@@ -29,7 +29,15 @@ export function FindReplaceDialog({ open, onClose, editor }: { open: boolean; on
   return (
     <Dialog open={open} onClose={onClose} title="Find & replace">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <TextField label="Find" value={find} onChange={(e) => { setFind(e.target.value); setLastReplacedCount(null); }} autoFocus />
+        <TextField
+          label="Find"
+          value={find}
+          onChange={(e) => {
+            setFind(e.target.value);
+            setLastReplacedCount(null);
+          }}
+          autoFocus
+        />
         <TextField label="Replace with" value={replace} onChange={(e) => setReplace(e.target.value)} />
         <p className="iw-help-text">
           {find ? `${matches.length} match${matches.length === 1 ? "" : "es"} in this scene` : "Searches the current scene only."}

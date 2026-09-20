@@ -3,15 +3,15 @@ import { db, nowIso } from "../db";
 import { pushUpsert, pushDelete } from "../sync";
 
 export async function listEntries(projectId: string, entryType?: SBEntry["entryType"]): Promise<StoryBibleEntry[]> {
-  const all = await db.storyBibleEntries.where("projectId").equals(projectId).and((e) => !e.deletedAt).toArray();
+  const all = await db.storyBibleEntries
+    .where("projectId")
+    .equals(projectId)
+    .and((e) => !e.deletedAt)
+    .toArray();
   return entryType ? all.filter((e) => e.entryType === entryType) : all;
 }
 
-export async function createEntry(
-  projectId: string,
-  entryType: SBEntry["entryType"],
-  name: string,
-): Promise<StoryBibleEntry> {
+export async function createEntry(projectId: string, entryType: SBEntry["entryType"], name: string): Promise<StoryBibleEntry> {
   const now = nowIso();
   const entry: StoryBibleEntry = {
     id: crypto.randomUUID(),
@@ -74,12 +74,7 @@ export async function listRelationships(projectId: string): Promise<Relationship
   return db.relationships.where("projectId").equals(projectId).toArray();
 }
 
-export async function createRelationship(
-  projectId: string,
-  fromEntryId: string,
-  toEntryId: string,
-  relationshipType: string,
-): Promise<Relationship> {
+export async function createRelationship(projectId: string, fromEntryId: string, toEntryId: string, relationshipType: string): Promise<Relationship> {
   const now = nowIso();
   const rel: Relationship = {
     id: crypto.randomUUID(),

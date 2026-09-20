@@ -3,11 +3,19 @@ import { db, nowIso } from "../db";
 import { pushUpsert } from "../sync";
 
 export async function listProjects(userId: string): Promise<Project[]> {
-  return db.projects.where("userId").equals(userId).and((p) => p.status !== "deleted").toArray();
+  return db.projects
+    .where("userId")
+    .equals(userId)
+    .and((p) => p.status !== "deleted")
+    .toArray();
 }
 
 export async function listSeries(userId: string): Promise<Series[]> {
-  return db.series.where("userId").equals(userId).and((s) => !s.deletedAt).toArray();
+  return db.series
+    .where("userId")
+    .equals(userId)
+    .and((s) => !s.deletedAt)
+    .toArray();
 }
 
 export async function createProject(

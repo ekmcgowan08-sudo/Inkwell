@@ -59,19 +59,19 @@ export function LegalAcceptancePage() {
           Before you continue
         </h1>
         <p style={{ color: "var(--color-text-secondary)" }}>
-          Please review these documents. They're drafts pending professional legal review — see{" "}
-          <code>docs/legal/</code> for the full set — but we still want you to actually read them before agreeing.
+          Please review these documents. They're drafts pending professional legal review — see <code>docs/legal/</code> for the full set — but we
+          still want you to actually read them before agreeing.
         </p>
         <DocumentPane title="Terms of Service" text={termsOfService} />
         <DocumentPane title="Privacy Policy" text={privacyPolicy} />
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: "0.875rem" }}>
-            <input type="checkbox" checked={termsChecked} onChange={(e) => setTermsChecked(e.target.checked)} style={{ marginTop: 2 }} />
-            I have read and agree to the Terms of Service.
+            <input type="checkbox" checked={termsChecked} onChange={(e) => setTermsChecked(e.target.checked)} style={{ marginTop: 2 }} />I have read
+            and agree to the Terms of Service.
           </label>
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: "0.875rem" }}>
-            <input type="checkbox" checked={privacyChecked} onChange={(e) => setPrivacyChecked(e.target.checked)} style={{ marginTop: 2 }} />
-            I have read and agree to the Privacy Policy.
+            <input type="checkbox" checked={privacyChecked} onChange={(e) => setPrivacyChecked(e.target.checked)} style={{ marginTop: 2 }} />I have
+            read and agree to the Privacy Policy.
           </label>
         </div>
         <Button onClick={continueToApp} disabled={!termsChecked || !privacyChecked || busy}>

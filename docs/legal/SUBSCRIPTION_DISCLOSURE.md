@@ -5,11 +5,11 @@
 
 ## Plans
 
-| Plan | Price | AI allowance |
-|---|---|---|
-| Free | $0 | Limited monthly AI tokens (see `entitlements.ai_monthly_token_allowance` default in `supabase/migrations/0010_billing.sql`) |
-| Author | [price TBD — hypothesis only, see `docs/COSTS.md`] | Higher monthly allowance |
-| Author + AI | [price TBD] | Highest monthly allowance |
+| Plan        | Price                                              | AI allowance                                                                                                                |
+| ----------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Free        | $0                                                 | Limited monthly AI tokens (see `entitlements.ai_monthly_token_allowance` default in `supabase/migrations/0010_billing.sql`) |
+| Author      | [price TBD — hypothesis only, see `docs/COSTS.md`] | Higher monthly allowance                                                                                                    |
+| Author + AI | [price TBD]                                        | Highest monthly allowance                                                                                                   |
 
 All core writing features (manuscript, story bible, storyboard, timeline, exports) are available on every
 plan, including Free — plans differ only in AI usage allowance and any future higher-usage features. This

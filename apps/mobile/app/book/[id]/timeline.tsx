@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { darkTheme } from "@inkwell/design-tokens";
@@ -171,7 +182,16 @@ export default function TimelineScreen() {
       <FlatList
         data={events}
         keyExtractor={(e) => e.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={darkTheme.accent} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={darkTheme.accent}
+          />
+        }
         contentContainerStyle={{ padding: 16, gap: 10 }}
         ListEmptyComponent={
           <View style={styles.empty}>

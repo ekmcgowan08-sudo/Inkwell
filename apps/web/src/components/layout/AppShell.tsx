@@ -2,15 +2,7 @@ import type { ReactNode } from "react";
 import { Feather } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-export function AppShell({
-  sidebar,
-  mobileNav,
-  children,
-}: {
-  sidebar: ReactNode;
-  mobileNav?: ReactNode;
-  children: ReactNode;
-}) {
+export function AppShell({ sidebar, mobileNav, children }: { sidebar: ReactNode; mobileNav?: ReactNode; children: ReactNode }) {
   const navigate = useNavigate();
   return (
     <div className="iw-shell">
@@ -40,17 +32,7 @@ export function AppShell({
   );
 }
 
-export function NavItem({
-  to,
-  icon,
-  label,
-  active,
-}: {
-  to: string;
-  icon: ReactNode;
-  label: string;
-  active?: boolean;
-}) {
+export function NavItem({ to, icon, label, active }: { to: string; icon: ReactNode; label: string; active?: boolean }) {
   return (
     <Link to={to} className={`iw-navitem ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}>
       {icon}

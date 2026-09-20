@@ -17,12 +17,8 @@ const THEME_KEY = "inkwell.theme";
 const MOTION_KEY = "inkwell.reducedMotion";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeChoice>(
-    () => (localStorage.getItem(THEME_KEY) as ThemeChoice) || "system",
-  );
-  const [reducedMotion, setReducedMotionState] = useState<boolean>(
-    () => localStorage.getItem(MOTION_KEY) === "true",
-  );
+  const [theme, setThemeState] = useState<ThemeChoice>(() => (localStorage.getItem(THEME_KEY) as ThemeChoice) || "system");
+  const [reducedMotion, setReducedMotionState] = useState<boolean>(() => localStorage.getItem(MOTION_KEY) === "true");
 
   useEffect(() => {
     const root = document.documentElement;

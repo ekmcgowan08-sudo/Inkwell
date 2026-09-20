@@ -138,13 +138,23 @@ export function ManuscriptPage() {
   }, []);
 
   const chapters = useLiveQuery(
-    () => db.chapters.where("projectId").equals(project.id).and((c) => !c.deletedAt).sortBy("sortOrder"),
+    () =>
+      db.chapters
+        .where("projectId")
+        .equals(project.id)
+        .and((c) => !c.deletedAt)
+        .sortBy("sortOrder"),
     [project.id],
     EMPTY_ARRAY,
   );
 
   const parts = useLiveQuery(
-    () => db.parts.where("projectId").equals(project.id).and((p) => !p.deletedAt).sortBy("sortOrder"),
+    () =>
+      db.parts
+        .where("projectId")
+        .equals(project.id)
+        .and((p) => !p.deletedAt)
+        .sortBy("sortOrder"),
     [project.id],
     EMPTY_ARRAY,
   );
@@ -258,7 +268,10 @@ export function ManuscriptPage() {
     const targetIndex = index + direction;
     if (index === -1 || targetIndex < 0 || targetIndex >= chapters.length) return;
     const reordered = arrayMove(chapters, index, targetIndex);
-    await reorderChapters(project.id, reordered.map((c) => c.id));
+    await reorderChapters(
+      project.id,
+      reordered.map((c) => c.id),
+    );
   }
 
   async function onChapterDragEnd(event: DragEndEvent) {
@@ -268,7 +281,10 @@ export function ManuscriptPage() {
     const newIndex = chapters.findIndex((c) => c.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
     const reordered = arrayMove(chapters, oldIndex, newIndex);
-    await reorderChapters(project.id, reordered.map((c) => c.id));
+    await reorderChapters(
+      project.id,
+      reordered.map((c) => c.id),
+    );
   }
 
   async function onAddChapter() {
@@ -319,7 +335,15 @@ export function ManuscriptPage() {
                 <input
                   value={p.title}
                   onChange={(e) => renamePart(p.id, e.target.value)}
-                  style={{ flex: 1, background: "transparent", border: "none", color: "var(--color-text-secondary)", fontSize: 12, outline: "none", padding: "2px 4px" }}
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--color-text-secondary)",
+                    fontSize: 12,
+                    outline: "none",
+                    padding: "2px 4px",
+                  }}
                 />
                 <IconButton label={`Delete ${p.title}`} onClick={() => setDeletePartId(p.id)}>
                   <Trash2 size={12} />
@@ -355,7 +379,10 @@ export function ManuscriptPage() {
                 index={i}
                 count={chapters.length}
                 parts={parts}
-                onOpen={async () => { await flushNow(); navigate(`/project/${project.id}/manuscript/${c.id}`); }}
+                onOpen={async () => {
+                  await flushNow();
+                  navigate(`/project/${project.id}/manuscript/${c.id}`);
+                }}
                 onDelete={() => setDeleteChapterId(c.id)}
                 onMove={(direction) => moveChapterByKeyboard(c, direction)}
                 onMovePart={(partId) => assignChapterToPart(c.id, partId)}
@@ -390,7 +417,16 @@ export function ManuscriptPage() {
             value={activeChapter?.title ?? ""}
             onChange={(e) => activeChapter && renameChapter(activeChapter.id, e.target.value)}
             aria-label="Chapter title"
-            style={{ background: "transparent", border: "none", outline: "none", color: "var(--color-text-primary)", fontSize: 14, fontWeight: 500, flex: 1, minWidth: 120 }}
+            style={{
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: "var(--color-text-primary)",
+              fontSize: 14,
+              fontWeight: 500,
+              flex: 1,
+              minWidth: 120,
+            }}
           />
           <span className="iw-help-text">
             {sceneWordCount.toLocaleString()} words this scene · {saveState === "saving" ? "Saving…" : "Saved"}
@@ -405,7 +441,14 @@ export function ManuscriptPage() {
 
         <div className="iw-ms-scene-tabs">
           {scenes.map((s) => (
-            <button key={s.id} className={`iw-ms-scene-tab ${s.id === activeScene?.id ? "active" : ""}`} onClick={async () => { await flushNow(); setActiveSceneId(s.id); }}>
+            <button
+              key={s.id}
+              className={`iw-ms-scene-tab ${s.id === activeScene?.id ? "active" : ""}`}
+              onClick={async () => {
+                await flushNow();
+                setActiveSceneId(s.id);
+              }}
+            >
               {s.title}
             </button>
           ))}

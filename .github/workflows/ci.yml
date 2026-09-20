@@ -41,7 +41,7 @@ jobs:
           pnpm --filter @inkwell/web test
 
       - name: Format check
-        run: npx prettier --check "**/*.{ts,tsx,md,json}" --ignore-path .gitignore || true
+        run: npx prettier --check . --ignore-path .gitignore
 
       - name: Build web app
         run: pnpm --filter @inkwell/web build

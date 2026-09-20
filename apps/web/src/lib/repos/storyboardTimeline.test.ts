@@ -6,7 +6,14 @@ const USER_ID = "11111111-1111-1111-1111-111111111111";
 const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
 
 async function seedProgress(date: string, goalMet: boolean) {
-  await db.dailyProgress.put({ id: `${PROJECT_ID}:${date}`, projectId: PROJECT_ID, userId: USER_ID, date, wordsWritten: goalMet ? 1000 : 0, goalMet });
+  await db.dailyProgress.put({
+    id: `${PROJECT_ID}:${date}`,
+    projectId: PROJECT_ID,
+    userId: USER_ID,
+    date,
+    wordsWritten: goalMet ? 1000 : 0,
+    goalMet,
+  });
 }
 
 describe("storyboardTimeline goals/streak repo", () => {

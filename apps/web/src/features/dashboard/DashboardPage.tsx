@@ -49,7 +49,11 @@ export function DashboardPage() {
         .filter((p) => (showArchived ? p.status === "archived" : p.status === "active"))
         .map(async (p) => {
           const words = await projectWordCount(p.id);
-          const chapters = await db.chapters.where("projectId").equals(p.id).and((c) => !c.deletedAt).count();
+          const chapters = await db.chapters
+            .where("projectId")
+            .equals(p.id)
+            .and((c) => !c.deletedAt)
+            .count();
           const characters = await db.storyBibleEntries
             .where("projectId")
             .equals(p.id)
@@ -181,12 +185,18 @@ export function DashboardPage() {
                   <div className="iw-progress" style={{ marginBottom: 8 }}>
                     <div className="iw-progress-fill" style={{ width: `${pct}%` }} />
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 14 }}>
-                    <span>{p.words.toLocaleString()} / {p.goalWords.toLocaleString()} words</span>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 14 }}
+                  >
+                    <span>
+                      {p.words.toLocaleString()} / {p.goalWords.toLocaleString()} words
+                    </span>
                     <span>{pct}%</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--color-text-secondary)" }}>
-                    <span>{p.chapters} chapters · {p.characters} cast</span>
+                    <span>
+                      {p.chapters} chapters · {p.characters} cast
+                    </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <Clock size={12} /> {new Date(p.lastEditedAt).toLocaleDateString()}
                     </span>

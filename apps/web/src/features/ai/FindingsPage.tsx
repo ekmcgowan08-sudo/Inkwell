@@ -40,8 +40,8 @@ export function FindingsPage() {
         </Button>
       </div>
       <p className="iw-page-subtitle">
-        Review AI-detected issues without interrupting writing. You're always the final authority — accept, dismiss, snooze,
-        or mark anything intentional.
+        Review AI-detected issues without interrupting writing. You're always the final authority — accept, dismiss, snooze, or mark anything
+        intentional.
       </p>
 
       {open.length === 0 && resolved.length === 0 && (
@@ -67,7 +67,9 @@ export function FindingsPage() {
                   <span className="iw-help-text">{Math.round(f.confidence * 100)}% confidence</span>
                 </div>
                 <div style={{ fontWeight: 600, marginBottom: 4 }}>{f.title}</div>
-                <p className="iw-help-text" style={{ margin: 0 }}>{f.explanation}</p>
+                <p className="iw-help-text" style={{ margin: 0 }}>
+                  {f.explanation}
+                </p>
                 {f.evidence.length > 0 && (
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                     {f.evidence.map((e, i) => (
@@ -78,11 +80,21 @@ export function FindingsPage() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-              <Button size="sm" onClick={() => setStatus(f.id, "accepted")}>Accept</Button>
-              <Button size="sm" variant="secondary" onClick={() => setStatus(f.id, "dismissed")}>Dismiss</Button>
-              <Button size="sm" variant="secondary" onClick={() => setStatus(f.id, "snoozed")}>Snooze</Button>
-              <Button size="sm" variant="secondary" onClick={() => setStatus(f.id, "marked_intentional")}>Mark intentional</Button>
-              <Button size="sm" variant="ghost" onClick={() => setStatus(f.id, "converted_to_task")}>Convert to revision task</Button>
+              <Button size="sm" onClick={() => setStatus(f.id, "accepted")}>
+                Accept
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setStatus(f.id, "dismissed")}>
+                Dismiss
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setStatus(f.id, "snoozed")}>
+                Snooze
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setStatus(f.id, "marked_intentional")}>
+                Mark intentional
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setStatus(f.id, "converted_to_task")}>
+                Convert to revision task
+              </Button>
             </div>
           </div>
         ))}

@@ -94,11 +94,7 @@ export function buildSystemPrompt(mode: AIMode, ctx: ContextBundle): string {
     lines.push("");
   }
 
-  if (
-    ctx.chapterSummaries.length === 0 &&
-    ctx.retrievedChunks.length === 0 &&
-    ctx.storyBibleDigest.length === 0
-  ) {
+  if (ctx.chapterSummaries.length === 0 && ctx.retrievedChunks.length === 0 && ctx.storyBibleDigest.length === 0) {
     lines.push("NOTE: This project has no manuscript or story-bible content yet. Say so plainly if asked about it.");
   }
 

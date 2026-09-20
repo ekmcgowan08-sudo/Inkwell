@@ -44,7 +44,7 @@ counters, the dashboard's progress bars, and the AI context budgeter, so the num
 
 Replaces the prototype's session-only calculation entirely. See `apps/web/src/lib/repos/storyboardTimeline.ts`
 `recordWordsWrittenToday`: the first time a given calendar day (local timezone) sees this project — called on
-project open *and* after every autosave — the current total word count is captured as that day's baseline in
+project open _and_ after every autosave — the current total word count is captured as that day's baseline in
 a local-only Dexie table (`dailyBaselines`, never synced). "Words today" is then always `currentTotal -
 baseline`.
 

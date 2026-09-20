@@ -30,12 +30,7 @@ export default function ManuscriptScreen() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await getSupabase()
-        .from("chapters")
-        .select("*")
-        .eq("project_id", projectId)
-        .is("deleted_at", null)
-        .order("sort_order");
+      const { data } = await getSupabase().from("chapters").select("*").eq("project_id", projectId).is("deleted_at", null).order("sort_order");
       const rows = (data ?? []).map((r) => toCamelRow<Chapter>(r));
       setChapters(rows);
       if (rows[0]) setActiveChapterId(rows[0].id);
@@ -150,7 +145,15 @@ const styles = StyleSheet.create({
   navLink: { color: darkTheme.textSecondary, fontSize: 14, fontWeight: "600" },
   navLinkActive: { color: darkTheme.accent },
   chapterBar: { flexGrow: 0, paddingHorizontal: 12, paddingVertical: 10 },
-  chapterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: darkTheme.bgElevated, marginRight: 8, minHeight: 40, justifyContent: "center" },
+  chapterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: darkTheme.bgElevated,
+    marginRight: 8,
+    minHeight: 40,
+    justifyContent: "center",
+  },
   chapterChipActive: { backgroundColor: darkTheme.primary },
   chapterChipText: { color: darkTheme.textSecondary, fontSize: 13 },
   chapterChipTextActive: { color: darkTheme.textOnPrimary, fontWeight: "600" },

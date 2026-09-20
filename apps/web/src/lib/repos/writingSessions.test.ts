@@ -43,19 +43,34 @@ describe("writingSessions repo", () => {
     // Seeded directly with distinct startedAt timestamps for deterministic ordering — two real
     // startWritingSession() calls in a fast test can land in the same millisecond.
     await db.writingSessions.put({
-      id: "a", projectId: PROJECT_ID, userId: USER_ID,
-      startedAt: "2026-01-01T10:00:00.000Z", endedAt: "2026-01-01T10:20:00.000Z",
-      wordsStart: 100, wordsEnd: 150, createdAt: "2026-01-01T10:00:00.000Z",
+      id: "a",
+      projectId: PROJECT_ID,
+      userId: USER_ID,
+      startedAt: "2026-01-01T10:00:00.000Z",
+      endedAt: "2026-01-01T10:20:00.000Z",
+      wordsStart: 100,
+      wordsEnd: 150,
+      createdAt: "2026-01-01T10:00:00.000Z",
     });
     await db.writingSessions.put({
-      id: "b", projectId: PROJECT_ID, userId: USER_ID,
-      startedAt: "2026-01-01T11:00:00.000Z", endedAt: "2026-01-01T11:30:00.000Z",
-      wordsStart: 150, wordsEnd: 300, createdAt: "2026-01-01T11:00:00.000Z",
+      id: "b",
+      projectId: PROJECT_ID,
+      userId: USER_ID,
+      startedAt: "2026-01-01T11:00:00.000Z",
+      endedAt: "2026-01-01T11:30:00.000Z",
+      wordsStart: 150,
+      wordsEnd: 300,
+      createdAt: "2026-01-01T11:00:00.000Z",
     });
     await db.writingSessions.put({
-      id: "c", projectId: PROJECT_ID, userId: USER_ID,
-      startedAt: "2026-01-01T12:00:00.000Z", endedAt: null,
-      wordsStart: 300, wordsEnd: 300, createdAt: "2026-01-01T12:00:00.000Z",
+      id: "c",
+      projectId: PROJECT_ID,
+      userId: USER_ID,
+      startedAt: "2026-01-01T12:00:00.000Z",
+      endedAt: null,
+      wordsStart: 300,
+      wordsEnd: 300,
+      createdAt: "2026-01-01T12:00:00.000Z",
     }); // left open, should be excluded
 
     const recent = await listRecentSessions(PROJECT_ID, 10);

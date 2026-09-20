@@ -18,11 +18,7 @@ export default function LibraryScreen() {
   const load = useCallback(async () => {
     if (!userId) return;
     setError(null);
-    const { data, error } = await getSupabase()
-      .from("projects")
-      .select("*")
-      .eq("status", "active")
-      .order("last_edited_at", { ascending: false });
+    const { data, error } = await getSupabase().from("projects").select("*").eq("status", "active").order("last_edited_at", { ascending: false });
     if (error) setError(error.message);
     else setProjects((data ?? []).map((row) => toCamelRow<Project>(row)));
     setLoading(false);
@@ -55,7 +51,16 @@ export default function LibraryScreen() {
       <FlatList
         data={projects}
         keyExtractor={(p) => p.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={darkTheme.accent} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={darkTheme.accent}
+          />
+        }
         contentContainerStyle={{ padding: 16, gap: 12 }}
         ListEmptyComponent={
           <View style={styles.empty}>

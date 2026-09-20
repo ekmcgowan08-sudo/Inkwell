@@ -186,12 +186,7 @@ export async function buildContextFromSupabase(
     retrieveRankedStoryBibleEntries(userClient, projectId, question),
     userClient.from("canon_facts").select("id, statement").eq("project_id", projectId).eq("approved_by_author", true).limit(30),
     userClient.from("story_threads").select("id, title").eq("project_id", projectId).eq("status", "open").limit(20),
-    userClient
-      .from("timeline_events")
-      .select("id, label, when_label")
-      .eq("project_id", projectId)
-      .order("sort_order")
-      .limit(MAX_TIMELINE_EVENTS),
+    userClient.from("timeline_events").select("id, label, when_label").eq("project_id", projectId).order("sort_order").limit(MAX_TIMELINE_EVENTS),
     conversationId
       ? userClient
           .from("ai_messages")

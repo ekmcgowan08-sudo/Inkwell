@@ -31,9 +31,7 @@ const PORT = 55432;
 const BACKEND = process.env.RLS_TEST_BACKEND === "local" ? "local" : "docker";
 const LOCAL_DB_NAME = "inkwell_rls_test";
 const DB_URL =
-  BACKEND === "local"
-    ? `postgres://postgres:postgres@127.0.0.1:5432/${LOCAL_DB_NAME}`
-    : `postgres://postgres:postgres@127.0.0.1:${PORT}/postgres`;
+  BACKEND === "local" ? `postgres://postgres:postgres@127.0.0.1:5432/${LOCAL_DB_NAME}` : `postgres://postgres:postgres@127.0.0.1:${PORT}/postgres`;
 
 let passed = 0;
 let failed = 0;
@@ -142,10 +140,15 @@ function startContainer() {
   console.log("Starting throwaway Postgres container…");
   spawnSync("docker", ["rm", "-f", CONTAINER_NAME], { stdio: "ignore" });
   const result = spawnSync("docker", [
-    "run", "--rm", "-d",
-    "--name", CONTAINER_NAME,
-    "-e", "POSTGRES_PASSWORD=postgres",
-    "-p", `${PORT}:5432`,
+    "run",
+    "--rm",
+    "-d",
+    "--name",
+    CONTAINER_NAME,
+    "-e",
+    "POSTGRES_PASSWORD=postgres",
+    "-p",
+    `${PORT}:5432`,
     "postgres:16-alpine",
   ]);
   if (result.status !== 0) {
@@ -185,7 +188,9 @@ async function applySchema(client: Client) {
   await client.query(shim);
 
   const migrationsDir = join(ROOT, "supabase", "migrations");
-  const files = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort();
+  const files = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
   for (const file of files) {
     const sql = readFileSync(join(migrationsDir, file), "utf8");
     try {
@@ -224,17 +229,13 @@ async function main() {
 
     await test("user A can create a series, project, chapter, scene, and story-bible entry", async () => {
       await asUser(client!, userA);
-      const series = await client!.query(
-        `insert into public.series (user_id, title) values ('${userA}', 'Ravens Series') returning id`,
-      );
+      const series = await client!.query(`insert into public.series (user_id, title) values ('${userA}', 'Ravens Series') returning id`);
       seriesAId = series.rows[0].id;
       const project = await client!.query(
         `insert into public.projects (user_id, series_id, title) values ('${userA}', '${seriesAId}', 'Court of Nine Ravens') returning id`,
       );
       projectAId = project.rows[0].id;
-      const chapter = await client!.query(
-        `insert into public.chapters (project_id, title) values ('${projectAId}', 'Chapter 1') returning id`,
-      );
+      const chapter = await client!.query(`insert into public.chapters (project_id, title) values ('${projectAId}', 'Chapter 1') returning id`);
       chapterAId = chapter.rows[0].id;
       const scene = await client!.query(
         `insert into public.scenes (project_id, chapter_id, title, plain_text) values ('${projectAId}', '${chapterAId}', 'Opening scene', 'Nine ravens circled the tower.') returning id`,
@@ -303,27 +304,135 @@ async function main() {
     // The remaining project-/user-scoped tables all follow the same "user_owns_project(project_id)"
     // (or user_id = auth.uid()) shape as appearances above; testTableIsolation proves each one rather
     // than trusting the migration comment that says it's RLS-protected. See docs/DECISIONS.md.
-    await testTableIsolation(client!, userA, userB, "canon fact", "canon_facts", "project_id, statement", `'${projectAId}', 'Isolde has black eyes'`, { update: "statement = 'Hijacked'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "custom field definition", "custom_field_defs", "project_id, entry_type, label", `'${projectAId}', 'character', 'Eye color'`, { update: "label = 'Hijacked'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "story thread", "story_threads", "project_id, title", `'${projectAId}', 'The missing crown'`, { update: "title = 'Hijacked'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "storyboard card", "storyboard_cards", "project_id, title", `'${projectAId}', 'Opening card'`, { update: "title = 'Hijacked'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "timeline event", "timeline_events", "project_id, label", `'${projectAId}', 'The ravens arrive'`, { update: "label = 'Hijacked'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "goal", "goals", "project_id, kind, target_words", `'${projectAId}', 'daily', 500`, { update: "target_words = 999999", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "media asset", "media_assets", "project_id, kind, provider, prompt_used", `'${projectAId}', 'character_portrait', 'test-provider', 'A raven-haired sorceress'`, { update: "prompt_used = 'Hijacked'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "part", "parts", "project_id, title", `'${projectAId}', 'Part One'`, { update: "title = 'Hijacked'", hasDelete: true });
     await testTableIsolation(
-      client!, userA, userB, "relationship", "relationships",
+      client!,
+      userA,
+      userB,
+      "canon fact",
+      "canon_facts",
+      "project_id, statement",
+      `'${projectAId}', 'Isolde has black eyes'`,
+      { update: "statement = 'Hijacked'", hasDelete: true },
+    );
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "custom field definition",
+      "custom_field_defs",
+      "project_id, entry_type, label",
+      `'${projectAId}', 'character', 'Eye color'`,
+      { update: "label = 'Hijacked'", hasDelete: true },
+    );
+    await testTableIsolation(client!, userA, userB, "story thread", "story_threads", "project_id, title", `'${projectAId}', 'The missing crown'`, {
+      update: "title = 'Hijacked'",
+      hasDelete: true,
+    });
+    await testTableIsolation(client!, userA, userB, "storyboard card", "storyboard_cards", "project_id, title", `'${projectAId}', 'Opening card'`, {
+      update: "title = 'Hijacked'",
+      hasDelete: true,
+    });
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "timeline event",
+      "timeline_events",
+      "project_id, label",
+      `'${projectAId}', 'The ravens arrive'`,
+      { update: "label = 'Hijacked'", hasDelete: true },
+    );
+    await testTableIsolation(client!, userA, userB, "goal", "goals", "project_id, kind, target_words", `'${projectAId}', 'daily', 500`, {
+      update: "target_words = 999999",
+      hasDelete: true,
+    });
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "media asset",
+      "media_assets",
+      "project_id, kind, provider, prompt_used",
+      `'${projectAId}', 'character_portrait', 'test-provider', 'A raven-haired sorceress'`,
+      { update: "prompt_used = 'Hijacked'", hasDelete: true },
+    );
+    await testTableIsolation(client!, userA, userB, "part", "parts", "project_id, title", `'${projectAId}', 'Part One'`, {
+      update: "title = 'Hijacked'",
+      hasDelete: true,
+    });
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "relationship",
+      "relationships",
       "project_id, from_entry_id, to_entry_id, relationship_type",
       `'${projectAId}', '${entryAId}', '${entryA2Id}', 'rivals'`,
       { update: "relationship_type = 'Hijacked'", hasDelete: true },
     );
-    await testTableIsolation(client!, userA, userB, "named snapshot", "named_snapshots", "project_id, name, storage_path", `'${projectAId}', 'Before revision pass', 'snapshots/test.zip'`, { hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "document revision", "document_revisions", "scene_id, project_id, revision, content", `'${sceneAId}', '${projectAId}', 999, '{}'::jsonb`);
-    await testTableIsolation(client!, userA, userB, "writing session", "writing_sessions", "project_id, user_id, words_start", `'${projectAId}', '${userA}', 0`, { update: "words_end = 500", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "daily progress row", "daily_progress", "project_id, user_id, progress_date, words_written", `'${projectAId}', '${userA}', '2026-09-18', 400`, { update: "words_written = 999", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "export job", "export_jobs", "project_id, format", `'${projectAId}', 'epub'`, { update: "status = 'failed'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "import job", "import_jobs", "project_id, user_id, source, original_filename", `'${projectAId}', '${userA}', 'txt', 'manuscript.txt'`, { update: "status = 'failed'", hasDelete: true });
-    await testTableIsolation(client!, userA, userB, "integration connection", "integration_connections", "user_id, provider", `'${userA}', 'google_drive'`, { update: "status = 'error'", hasDelete: true });
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "named snapshot",
+      "named_snapshots",
+      "project_id, name, storage_path",
+      `'${projectAId}', 'Before revision pass', 'snapshots/test.zip'`,
+      { hasDelete: true },
+    );
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "document revision",
+      "document_revisions",
+      "scene_id, project_id, revision, content",
+      `'${sceneAId}', '${projectAId}', 999, '{}'::jsonb`,
+    );
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "writing session",
+      "writing_sessions",
+      "project_id, user_id, words_start",
+      `'${projectAId}', '${userA}', 0`,
+      { update: "words_end = 500", hasDelete: true },
+    );
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "daily progress row",
+      "daily_progress",
+      "project_id, user_id, progress_date, words_written",
+      `'${projectAId}', '${userA}', '2026-09-18', 400`,
+      { update: "words_written = 999", hasDelete: true },
+    );
+    await testTableIsolation(client!, userA, userB, "export job", "export_jobs", "project_id, format", `'${projectAId}', 'epub'`, {
+      update: "status = 'failed'",
+      hasDelete: true,
+    });
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "import job",
+      "import_jobs",
+      "project_id, user_id, source, original_filename",
+      `'${projectAId}', '${userA}', 'txt', 'manuscript.txt'`,
+      { update: "status = 'failed'", hasDelete: true },
+    );
+    await testTableIsolation(
+      client!,
+      userA,
+      userB,
+      "integration connection",
+      "integration_connections",
+      "user_id, provider",
+      `'${userA}', 'google_drive'`,
+      { update: "status = 'error'", hasDelete: true },
+    );
 
     await test("user B's UPDATE against user A's project affects 0 rows (not an error, a silent no-op — verify explicitly)", async () => {
       await asUser(client!, userB);
@@ -368,17 +477,13 @@ async function main() {
       await asUser(client!, userA);
       const scenesAsOwner = await client!.query(`select id from public.search_scenes_ranked('${projectAId}', 'ravens', 12)`);
       assert(scenesAsOwner.rowCount === 1, "owning user should get the matching scene back from ranked search");
-      const entriesAsOwner = await client!.query(
-        `select id from public.search_story_bible_entries_ranked('${projectAId}', 'Isolde', 40)`,
-      );
+      const entriesAsOwner = await client!.query(`select id from public.search_story_bible_entries_ranked('${projectAId}', 'Isolde', 40)`);
       assert(entriesAsOwner.rowCount === 1, "owning user should get the matching story bible entry back from ranked search");
 
       await asUser(client!, userB);
       const scenesAsOther = await client!.query(`select id from public.search_scenes_ranked('${projectAId}', 'ravens', 12)`);
       assert(scenesAsOther.rowCount === 0, "ranked scene search leaked project A's content to user B");
-      const entriesAsOther = await client!.query(
-        `select id from public.search_story_bible_entries_ranked('${projectAId}', 'Isolde', 40)`,
-      );
+      const entriesAsOther = await client!.query(`select id from public.search_story_bible_entries_ranked('${projectAId}', 'Isolde', 40)`);
       assert(entriesAsOther.rowCount === 0, "ranked story bible search leaked project A's content to user B");
     });
 
@@ -403,7 +508,10 @@ async function main() {
     await test("a client cannot insert AI messages directly (server-only write path)", async () => {
       await asUser(client!, userA);
       await expectRejected(
-        () => client!.query(`insert into public.ai_messages (conversation_id, project_id, role, content) values ('${randomUUID()}', '${projectAId}', 'user', 'hello')`),
+        () =>
+          client!.query(
+            `insert into public.ai_messages (conversation_id, project_id, role, content) values ('${randomUUID()}', '${projectAId}', 'user', 'hello')`,
+          ),
         "expected direct client insert into ai_messages to be rejected",
       );
     });
@@ -425,7 +533,9 @@ async function main() {
       const findingAId = created.rows[0].id;
 
       await asUser(client!, userA);
-      const updated = await client!.query(`update public.ai_findings set status = 'dismissed', author_note = 'not a real issue' where id = '${findingAId}'`);
+      const updated = await client!.query(
+        `update public.ai_findings set status = 'dismissed', author_note = 'not a real issue' where id = '${findingAId}'`,
+      );
       assert(updated.rowCount === 1, "the owning user should be able to update status/author_note on a finding in their own project");
 
       await asUser(client!, userB);
@@ -479,7 +589,10 @@ async function main() {
 
       await asUser(client!, userA);
       await expectRejected(
-        () => client!.query(`insert into public.generation_jobs (project_id, media_asset_id, provider) values ('${projectAId}', '${mediaAssetAId}', 'test-provider')`),
+        () =>
+          client!.query(
+            `insert into public.generation_jobs (project_id, media_asset_id, provider) values ('${projectAId}', '${mediaAssetAId}', 'test-provider')`,
+          ),
         "expected a direct client insert into generation_jobs to be rejected — it is server-written only",
       );
       const ownRows = await client!.query(`select id from public.generation_jobs where id = '${generationJobAId}'`);

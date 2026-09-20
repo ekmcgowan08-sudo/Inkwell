@@ -20,8 +20,8 @@ items off as you complete them (this file is meant to be edited).
 - [ ] Create an account and API key at <https://console.anthropic.com/settings/keys>.
 - [ ] Set `ANTHROPIC_API_KEY` (and confirm `ANTHROPIC_MODEL` against
       <https://docs.claude.com/en/docs/about-claude/models> — don't assume the repo's default is still
-      current) as a secret on the deployed `ai-assistant` Edge Function: `supabase secrets set
-      ANTHROPIC_API_KEY=... ANTHROPIC_MODEL=...`.
+      current) as a secret on the deployed `ai-assistant` Edge Function:
+      `supabase secrets set ANTHROPIC_API_KEY=... ANTHROPIC_MODEL=...`.
 - [ ] Decide and set `AI_FREE_PLAN_MONTHLY_TOKEN_ALLOWANCE` / `AI_AUTHOR_PLAN_MONTHLY_TOKEN_ALLOWANCE` for your
       actual cost tolerance — the defaults in `.env.example` are placeholders, not a recommendation.
 - [ ] Until this key is set, the AI Assistant silently falls back to a deterministic test provider (clearly
@@ -99,7 +99,7 @@ items off as you complete them (this file is meant to be edited).
 ## 9. Two-factor / account security for your own accounts
 
 - [ ] Enable MFA on your Supabase, Anthropic, Apple Developer, Google Play Console, and domain registrar
-      accounts. This is the one item on this list purely about protecting *you*, not the product.
+      accounts. This is the one item on this list purely about protecting _you_, not the product.
 
 ## Everything NOT on this list
 

@@ -5,14 +5,14 @@ the draft, which still needs professional legal review before publication).
 
 ## What Inkwell stores, and where
 
-| Data | Where | Encrypted in transit | Encrypted at rest |
-|---|---|---|---|
-| Manuscript text, story bible, timeline, goals | Supabase Postgres (project's own database) | Yes (TLS) | Yes, by Supabase's infrastructure-level disk encryption — **not** end-to-end; Inkwell's backend can technically read it |
-| Local working copy (autosave, offline queue) | IndexedDB in the browser/desktop webview | N/A (device-local) | Depends on OS-level disk encryption, not app-controlled |
-| Session/refresh tokens (web/desktop) | `localStorage` | N/A (device-local) | Not specially encrypted — standard browser storage |
-| Session/refresh tokens (mobile) | OS Keychain/Keystore via `expo-secure-store` | N/A (device-local) | Yes, by the OS |
-| Uploaded media (portraits, covers) | Supabase Storage | Yes (TLS) | Yes, infrastructure-level |
-| AI conversation history | Supabase Postgres (`ai_conversations`, `ai_messages`) | Yes (TLS) | Yes, infrastructure-level |
+| Data                                          | Where                                                 | Encrypted in transit | Encrypted at rest                                                                                                       |
+| --------------------------------------------- | ----------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Manuscript text, story bible, timeline, goals | Supabase Postgres (project's own database)            | Yes (TLS)            | Yes, by Supabase's infrastructure-level disk encryption — **not** end-to-end; Inkwell's backend can technically read it |
+| Local working copy (autosave, offline queue)  | IndexedDB in the browser/desktop webview              | N/A (device-local)   | Depends on OS-level disk encryption, not app-controlled                                                                 |
+| Session/refresh tokens (web/desktop)          | `localStorage`                                        | N/A (device-local)   | Not specially encrypted — standard browser storage                                                                      |
+| Session/refresh tokens (mobile)               | OS Keychain/Keystore via `expo-secure-store`          | N/A (device-local)   | Yes, by the OS                                                                                                          |
+| Uploaded media (portraits, covers)            | Supabase Storage                                      | Yes (TLS)            | Yes, infrastructure-level                                                                                               |
+| AI conversation history                       | Supabase Postgres (`ai_conversations`, `ai_messages`) | Yes (TLS)            | Yes, infrastructure-level                                                                                               |
 
 **Do not describe Inkwell as "end-to-end encrypted."** It is not. If that becomes a real requirement later,
 it needs a genuine client-side encryption design (keys the server never sees) — a significant architecture

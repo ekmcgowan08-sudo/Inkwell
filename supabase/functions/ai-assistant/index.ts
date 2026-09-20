@@ -37,7 +37,9 @@ function currentPeriodMonth(): string {
 function selectProvider(): LLMProvider {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) {
-    console.warn("ANTHROPIC_API_KEY not set — falling back to the deterministic test provider. Set it in supabase/functions/.env for real AI responses.");
+    console.warn(
+      "ANTHROPIC_API_KEY not set — falling back to the deterministic test provider. Set it in supabase/functions/.env for real AI responses.",
+    );
     return createTestProvider();
   }
   return createAnthropicProvider({ apiKey, model: Deno.env.get("ANTHROPIC_MODEL") || DEFAULT_ANTHROPIC_MODEL });
@@ -82,11 +84,7 @@ async function handleRequest(req: Request): Promise<Response> {
     // as if it didn't exist — no separate "is this yours" check needed, and
     // no way to distinguish "not found" from "not yours" (avoids leaking
     // existence of other users' projects).
-    const { data: project, error: projectError } = await userClient
-      .from("projects")
-      .select("id, title, series_id")
-      .eq("id", projectId)
-      .maybeSingle();
+    const { data: project, error: projectError } = await userClient.from("projects").select("id, title, series_id").eq("id", projectId).maybeSingle();
     if (projectError) throw new AssistantError("provider_error", projectError.message);
     if (!project) throw new AssistantError("project_not_found", "Project not found.");
 
@@ -203,20 +201,18 @@ async function handleRequest(req: Request): Promise<Response> {
 
     const model = Deno.env.get("ANTHROPIC_MODEL") || DEFAULT_ANTHROPIC_MODEL;
     const costMicros = estimateCostUsdMicros(model, completion.usage.tokensInput, completion.usage.tokensOutput);
-    await serviceClient
-      .from("ai_usage")
-      .upsert(
-        {
-          user_id: user.id,
-          project_id: null,
-          period_month: periodMonth,
-          tokens_input: (usage?.tokens_input ?? 0) + completion.usage.tokensInput,
-          tokens_output: (usage?.tokens_output ?? 0) + completion.usage.tokensOutput,
-          estimated_cost_usd_micros: costMicros,
-          request_count: 1,
-        },
-        { onConflict: "user_id,project_id,period_month" },
-      );
+    await serviceClient.from("ai_usage").upsert(
+      {
+        user_id: user.id,
+        project_id: null,
+        period_month: periodMonth,
+        tokens_input: (usage?.tokens_input ?? 0) + completion.usage.tokensInput,
+        tokens_output: (usage?.tokens_output ?? 0) + completion.usage.tokensOutput,
+        estimated_cost_usd_micros: costMicros,
+        request_count: 1,
+      },
+      { onConflict: "user_id,project_id,period_month" },
+    );
 
     return jsonResponse({
       conversationId: resolvedConversationId,

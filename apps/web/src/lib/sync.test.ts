@@ -127,7 +127,20 @@ describe("sync.ts — revision-gated push and conflict resolution", () => {
       table: "chapters",
       recordId: "c1",
       localRow: makeChapter({ title: "Mine", revision: 2 }) as unknown as Record<string, unknown>,
-      serverRow: { id: "c1", title: "Theirs", revision: 5, project_id: "p1", sort_order: 0, part_id: null, status: "drafting", summary: null, word_count: 0, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z", deleted_at: null },
+      serverRow: {
+        id: "c1",
+        title: "Theirs",
+        revision: 5,
+        project_id: "p1",
+        sort_order: 0,
+        part_id: null,
+        status: "drafting",
+        summary: null,
+        word_count: 0,
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-01T00:00:00.000Z",
+        deleted_at: null,
+      },
       detectedAt: "2026-01-01T00:00:00.000Z",
     });
 

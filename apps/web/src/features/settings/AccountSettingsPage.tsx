@@ -75,11 +75,7 @@ export function AccountSettingsPage() {
               <option value="dark">Dark — Writer's Den</option>
               <option value="light">Light</option>
             </SelectField>
-            <SelectField
-              label="Motion"
-              value={reducedMotion ? "reduced" : "full"}
-              onChange={(e) => setReducedMotion(e.target.value === "reduced")}
-            >
+            <SelectField label="Motion" value={reducedMotion ? "reduced" : "full"} onChange={(e) => setReducedMotion(e.target.value === "reduced")}>
               <option value="full">Full motion</option>
               <option value="reduced">Reduced motion</option>
             </SelectField>
@@ -99,8 +95,8 @@ export function AccountSettingsPage() {
         <div className="iw-card" style={{ padding: 20, marginBottom: 20 }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>AI & data use</div>
           <p className="iw-help-text">
-            Inkwell never trains on your manuscripts unless you separately and explicitly opt in — see
-            docs/PRIVACY_DATA_FLOW.md. No such opt-in exists yet in this build; there is nothing to turn on or off.
+            Inkwell never trains on your manuscripts unless you separately and explicitly opt in — see docs/PRIVACY_DATA_FLOW.md. No such opt-in
+            exists yet in this build; there is nothing to turn on or off.
           </p>
         </div>
 

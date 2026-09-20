@@ -35,9 +35,7 @@ export function OnboardingPage() {
         <h1 className="iw-display" style={{ marginTop: 0 }}>
           Welcome to your studio
         </h1>
-        <p style={{ color: "var(--color-text-secondary)" }}>
-          Optional: how do you like to write? This never locks you out of features either way.
-        </p>
+        <p style={{ color: "var(--color-text-secondary)" }}>Optional: how do you like to write? This never locks you out of features either way.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, margin: "20px 0" }}>
           {STYLES.map((s) => (
             <button

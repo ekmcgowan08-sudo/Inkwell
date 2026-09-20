@@ -98,7 +98,7 @@ for the full current-state detail behind each item.
 
 - Real-time collaboration (multiple authors on one project) — no current requirement for this, not
   architected either way.
-- Custom user-defined field *definitions* per project (the `custom_field_defs` table exists; freeform
+- Custom user-defined field _definitions_ per project (the `custom_field_defs` table exists; freeform
   notes/tags cover the "don't over-structure" need today, but true admin-defined structured fields are a
   separate feature).
 - Automated dropped-plot-thread suggestions surfaced proactively (today, findings require the author to click

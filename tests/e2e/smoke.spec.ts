@@ -55,7 +55,10 @@ test("golden path: create a book and use every core module", async ({ page }) =>
   await expect(page.locator(".iw-ai-bubble.assistant").last()).toContainText("test-provider", { timeout: 5000 });
 
   await page.getByRole("link", { name: /AI Findings/ }).click();
-  await page.getByRole("button", { name: /Run consistency scan/ }).first().click();
+  await page
+    .getByRole("button", { name: /Run consistency scan/ })
+    .first()
+    .click();
 
   await page.getByRole("link", { name: /Exports/ }).click();
   await expect(page.getByText("Complete Inkwell project backup")).toBeVisible();

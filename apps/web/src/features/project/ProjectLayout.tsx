@@ -1,18 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-  ArrowLeft,
-  BookOpen,
-  CalendarClock,
-  Download,
-  History,
-  LayoutGrid,
-  ListChecks,
-  Settings,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarClock, Download, History, LayoutGrid, ListChecks, Settings, Sparkles, Users } from "lucide-react";
 import { db } from "../../lib/db";
 import { projectWordCount } from "../../lib/repos/manuscript";
 import { AppShell, NavItem } from "../../components/layout/AppShell";
@@ -44,10 +33,18 @@ export function ProjectLayout() {
 
   const project = useLiveQuery(() => (projectId ? db.projects.get(projectId) : undefined), [projectId]);
   const wordCount = useLiveQuery(() => (projectId ? projectWordCount(projectId) : 0), [projectId]) ?? 0;
-  const chapterCount = useLiveQuery(
-    () => (projectId ? db.chapters.where("projectId").equals(projectId).and((c) => !c.deletedAt).count() : 0),
-    [projectId],
-  ) ?? 0;
+  const chapterCount =
+    useLiveQuery(
+      () =>
+        projectId
+          ? db.chapters
+              .where("projectId")
+              .equals(projectId)
+              .and((c) => !c.deletedAt)
+              .count()
+          : 0,
+      [projectId],
+    ) ?? 0;
 
   useEffect(() => onSyncStatusChange(setSyncStatus), []);
 
@@ -102,7 +99,16 @@ export function ProjectLayout() {
             {nav.map((n) => (
               <NavItem key={n.key} to={n.to} icon={n.icon} label={n.label} active={section === n.key} />
             ))}
-            <div style={{ marginTop: 32, paddingTop: 16, borderTop: "1px solid var(--color-border)", fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.8 }}>
+            <div
+              style={{
+                marginTop: 32,
+                paddingTop: 16,
+                borderTop: "1px solid var(--color-border)",
+                fontSize: 12,
+                color: "var(--color-text-secondary)",
+                lineHeight: 1.8,
+              }}
+            >
               <div style={{ textTransform: "uppercase", letterSpacing: 1, marginBottom: 6, color: "var(--color-accent)" }}>This Book</div>
               <div>{wordCount.toLocaleString()} words</div>
               <div>~{Math.max(1, Math.round(wordCount / 275))} pages</div>

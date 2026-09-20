@@ -16,18 +16,13 @@ export function RelationshipMap({ entries, relationships }: { entries: StoryBibl
   }
 
   return (
-    <svg
-      viewBox={`0 0 ${size} ${size}`}
-      width={size}
-      height={size}
-      role="img"
-      aria-label="Relationship map between story bible entries"
-    >
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label="Relationship map between story bible entries">
       {relationships.map((r) => {
         const from = byId.get(r.fromEntryId);
         const to = byId.get(r.toEntryId);
         if (!from || !to) return null;
-        const color = r.status === "conflict" ? "var(--color-danger)" : r.status === "alliance" ? "var(--color-success)" : "var(--color-border-strong)";
+        const color =
+          r.status === "conflict" ? "var(--color-danger)" : r.status === "alliance" ? "var(--color-success)" : "var(--color-border-strong)";
         return <line key={r.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth={2} />;
       })}
       {positioned.map(({ entry, x, y }) => (

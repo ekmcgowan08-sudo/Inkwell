@@ -8,8 +8,7 @@ import { checkAndRecordRateLimit } from "./rateLimit.ts";
 function makeQuery(response: { data: unknown; error: unknown; count?: number }) {
   const chain: Record<string, unknown> = {};
   for (const method of ["select", "eq", "lt", "gte"]) chain[method] = () => chain;
-  chain.then = (onFulfilled: (v: unknown) => unknown, onRejected: (e: unknown) => unknown) =>
-    Promise.resolve(response).then(onFulfilled, onRejected);
+  chain.then = (onFulfilled: (v: unknown) => unknown, onRejected: (e: unknown) => unknown) => Promise.resolve(response).then(onFulfilled, onRejected);
   return chain;
 }
 

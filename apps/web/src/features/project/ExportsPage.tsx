@@ -4,7 +4,16 @@ import { Download, Printer } from "lucide-react";
 import { useProjectContext } from "./ProjectLayout";
 import { EMPTY_ARRAY } from "../../lib/db";
 import { listChapters, listScenes } from "../../lib/repos/manuscript";
-import { buildProjectBackup, downloadBlob, downloadJson, downloadText, exportDocx, exportEpub, exportMarkdown, exportPlainText } from "../../lib/exportProject";
+import {
+  buildProjectBackup,
+  downloadBlob,
+  downloadJson,
+  downloadText,
+  exportDocx,
+  exportEpub,
+  exportMarkdown,
+  exportPlainText,
+} from "../../lib/exportProject";
 import { Button } from "../../components/ui/Button";
 import { TextField, SelectField } from "../../components/ui/FormControls";
 import "../../styles/manuscript.css";
@@ -23,16 +32,20 @@ export function ExportsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
 
-  const printChapters = useLiveQuery(async () => {
-    if (!printing) return [];
-    const chapters = await listChapters(project.id);
-    const result: { title: string; scenes: { title: string; plainText: string }[] }[] = [];
-    for (const c of chapters) {
-      const scenes = await listScenes(c.id);
-      result.push({ title: c.title, scenes: scenes.map((s) => ({ title: s.title, plainText: s.plainText })) });
-    }
-    return result;
-  }, [printing, project.id], EMPTY_ARRAY);
+  const printChapters = useLiveQuery(
+    async () => {
+      if (!printing) return [];
+      const chapters = await listChapters(project.id);
+      const result: { title: string; scenes: { title: string; plainText: string }[] }[] = [];
+      for (const c of chapters) {
+        const scenes = await listScenes(c.id);
+        result.push({ title: c.title, scenes: scenes.map((s) => ({ title: s.title, plainText: s.plainText })) });
+      }
+      return result;
+    },
+    [printing, project.id],
+    EMPTY_ARRAY,
+  );
 
   async function withBusy(key: string, fn: () => Promise<void>) {
     setBusy(key);
@@ -43,7 +56,11 @@ export function ExportsPage() {
     }
   }
 
-  const slug = project.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "manuscript";
+  const slug =
+    project.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "manuscript";
 
   async function doPrint() {
     setPrinting(true);
@@ -134,7 +151,6 @@ export function ExportsPage() {
           }
         />
       </div>
-
 
       {printing && (
         <div className="iw-print-area" aria-hidden={!printing}>

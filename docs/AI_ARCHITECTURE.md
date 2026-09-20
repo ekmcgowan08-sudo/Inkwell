@@ -10,7 +10,7 @@ imported by its full path, and only Edge Function code does.
 
 The model id is read from `ANTHROPIC_MODEL` (`supabase/functions/.env`), falling back to
 `DEFAULT_ANTHROPIC_MODEL` in that same file. Neither the fallback nor anywhere else in this codebase hardcodes
-a specific historical Claude snapshot as the *only* option — verify the configured id against
+a specific historical Claude snapshot as the _only_ option — verify the configured id against
 <https://docs.claude.com/en/docs/about-claude/models> before deploying, since model availability changes over
 time and this document can't stay current with that.
 
@@ -32,7 +32,7 @@ time and this document can't stay current with that.
 7. It builds the system prompt (`packages/ai-contracts/src/promptBuilder.ts`) — one shared function, so the
    Edge Function and the web app's local-only mode produce the same style of prompt.
 8. It calls the provider (real Anthropic, or the deterministic test provider if `ANTHROPIC_API_KEY` is unset —
-   this fallback exists so a Supabase project without AI credentials configured still returns *something*
+   this fallback exists so a Supabase project without AI credentials configured still returns _something_
    instead of a hard failure, clearly logged as a fallback).
 9. It strips any trailing findings block from the response (`extractFindings`, see "AI Findings vs. the AI
    Assistant's consistency-check mode" below), parses bracketed citations out of what's left
@@ -53,15 +53,15 @@ time and this document can't stay current with that.
 
 `ContextBundle` (`packages/ai-contracts/src/contracts.ts`) is deliberately narrow:
 
-| Field | Bound |
-|---|---|
-| `chapterSummaries` | up to 30 chapters, each just a title + summary (not full text) |
-| `retrievedChunks` | up to 12 scenes, most-recently-updated, each truncated to 800 characters |
-| `storyBibleDigest` | up to 40 entries, name + a short digest, not the full structured fields blob |
-| `approvedCanonFacts` | up to 30, author-approved only (`approved_by_author = true`) |
-| `openThreads` | up to 20 |
-| `recentTimelineEvents` | up to 20 |
-| `recentMessages` | last 6 turns of the current conversation, if any |
+| Field                  | Bound                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `chapterSummaries`     | up to 30 chapters, each just a title + summary (not full text)               |
+| `retrievedChunks`      | up to 12 scenes, most-recently-updated, each truncated to 800 characters     |
+| `storyBibleDigest`     | up to 40 entries, name + a short digest, not the full structured fields blob |
+| `approvedCanonFacts`   | up to 30, author-approved only (`approved_by_author = true`)                 |
+| `openThreads`          | up to 20                                                                     |
+| `recentTimelineEvents` | up to 20                                                                     |
+| `recentMessages`       | last 6 turns of the current conversation, if any                             |
 
 **Retrieval is ranked, not just recency-bounded.** `retrievedChunks` (scenes) and `storyBibleDigest` (story
 bible entries) are ranked against the author's actual question via `ts_rank` over the generated
@@ -80,7 +80,7 @@ real manuscript content.
 ## Series-level continuity (opt-in, off by default)
 
 `AssistantRequest.seriesScope` (default `false`) is the explicit opt-in — the assistant never reads outside
-the active project unless the author asks *and* the project actually belongs to a series. When both are true,
+the active project unless the author asks _and_ the project actually belongs to a series. When both are true,
 `fetchSeriesContext` (`_shared/buildContext.ts`) pulls a small, separately-bounded, book-labeled slice from up
 to `MAX_SERIES_BOOKS` (4) other books in the same series: `MAX_SERIES_CHAPTERS_PER_BOOK` (5) chapter summaries,
 `MAX_SERIES_CANON_FACTS_PER_BOOK` (10) approved canon facts, and `MAX_SERIES_STORY_BIBLE_PER_BOOK` (10) story
@@ -109,15 +109,15 @@ provider — but it depends on the model actually following the instruction; not
 bundle was entirely empty (a brand-new project), `"mixed"` otherwise. It is **not** currently a per-claim
 analysis of the response text — a genuinely per-sentence established/inference/invented classification would
 need either a second model call or much more careful prompt-engineered structured output, and wasn't built in
-this pass. Don't read more precision into the badge than "the model had *something* to work with."
+this pass. Don't read more precision into the badge than "the model had _something_ to work with."
 
 ## Usage, cost, and rate control
 
 - **Token allowance**: `entitlements.ai_monthly_token_allowance` (default 200,000/month on the free plan, set
   by the `handle_new_user_entitlement` trigger) checked against summed `ai_usage.tokens_input +
-  tokens_output` for the current calendar month (UTC) before any provider call.
+tokens_output` for the current calendar month (UTC) before any provider call.
 - **Cost tracking**: `packages/ai-contracts/src/pricing.ts` has a small, dated, clearly-labeled-as-hypothesis
-  pricing table (`PRICING_CHECKED_AT`) used only to *estimate* spend in `ai_usage.estimated_cost_usd_micros` —
+  pricing table (`PRICING_CHECKED_AT`) used only to _estimate_ spend in `ai_usage.estimated_cost_usd_micros` —
   never treated as an authoritative bill. Verify against <https://www.anthropic.com/pricing> before relying on
   it for anything financial; see `docs/COSTS.md`.
 - **Sliding-window rate limiting**: `checkAndRecordRateLimit` (`supabase/functions/_shared/rateLimit.ts`) caps

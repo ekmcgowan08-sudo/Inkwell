@@ -33,14 +33,7 @@ export function Dialog({ open, onClose, title, children, actions }: DialogProps)
 
   return (
     <div className="iw-dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div
-        className="iw-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        ref={dialogRef}
-        tabIndex={-1}
-      >
+      <div className="iw-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={dialogRef} tabIndex={-1}>
         <h2 id={titleId} className="iw-display">
           {title}
         </h2>

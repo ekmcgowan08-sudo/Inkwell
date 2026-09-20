@@ -28,9 +28,7 @@ let client: InkwellSupabaseClient | null = null;
  */
 export function getSupabase(): InkwellSupabaseClient {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error(
-      "EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY are not set. Copy .env.example to .env and fill them in.",
-    );
+    throw new Error("EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY are not set. Copy .env.example to .env and fill them in.");
   }
   if (!client) {
     client = createInkwellClient({

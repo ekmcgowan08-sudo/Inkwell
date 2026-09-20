@@ -29,23 +29,14 @@ export async function registerCloseGuard(hasPendingWork: () => boolean): Promise
       await appWindow.destroy();
       return;
     }
-    const shouldClose = await confirm(
-      "Some changes may not have finished saving. Close Inkwell anyway?",
-      { title: "Unsaved work", kind: "warning" },
-    );
+    const shouldClose = await confirm("Some changes may not have finished saving. Close Inkwell anyway?", { title: "Unsaved work", kind: "warning" });
     if (shouldClose) await appWindow.destroy();
   });
 
   return unlisten;
 }
 
-export type MenuAction =
-  | "new_book"
-  | "import"
-  | "export"
-  | "command_palette"
-  | "focus_mode"
-  | "find";
+export type MenuAction = "new_book" | "import" | "export" | "command_palette" | "focus_mode" | "find";
 
 /** Forwards native menu clicks (see src-tauri/src/lib.rs) as DOM CustomEvents the relevant page listens for. */
 export async function registerMenuBridge(): Promise<() => void> {

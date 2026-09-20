@@ -40,8 +40,16 @@ export async function dismissAppearance(id: string): Promise<void> {
  * suggestion until the next scan.
  */
 export async function detectAppearances(projectId: string): Promise<Appearance[]> {
-  const entries = await db.storyBibleEntries.where("projectId").equals(projectId).and((e) => !e.deletedAt).toArray();
-  const scenes = await db.scenes.where("projectId").equals(projectId).and((s) => !s.deletedAt).toArray();
+  const entries = await db.storyBibleEntries
+    .where("projectId")
+    .equals(projectId)
+    .and((e) => !e.deletedAt)
+    .toArray();
+  const scenes = await db.scenes
+    .where("projectId")
+    .equals(projectId)
+    .and((s) => !s.deletedAt)
+    .toArray();
   const existing = await db.appearances.where("projectId").equals(projectId).toArray();
   const existingKeys = new Set(existing.map((a) => `${a.entryId}:${a.sceneId}`));
 

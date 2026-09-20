@@ -38,6 +38,10 @@ export async function endWritingSession(id: string, wordsEnd: number): Promise<v
 }
 
 export async function listRecentSessions(projectId: string, limit = 10): Promise<WritingSession[]> {
-  const sessions = await db.writingSessions.where("projectId").equals(projectId).and((s) => !!s.endedAt).sortBy("startedAt");
+  const sessions = await db.writingSessions
+    .where("projectId")
+    .equals(projectId)
+    .and((s) => !!s.endedAt)
+    .sortBy("startedAt");
   return sessions.slice(-limit).reverse();
 }

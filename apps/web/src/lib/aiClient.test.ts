@@ -19,7 +19,11 @@ describe("askAssistant (local-only mode) — findings extraction", () => {
     expect(result.content).not.toContain("FINDINGS_JSON");
     expect(result.content).toContain("[test-provider deterministic response]");
 
-    const storedMessage = await db.aiMessages.where("conversationId").equals(result.conversationId).and((m) => m.role === "assistant").first();
+    const storedMessage = await db.aiMessages
+      .where("conversationId")
+      .equals(result.conversationId)
+      .and((m) => m.role === "assistant")
+      .first();
     expect(storedMessage!.content).not.toContain("FINDINGS_JSON");
 
     const findings = await db.aiFindings.where("projectId").equals(project.id).toArray();

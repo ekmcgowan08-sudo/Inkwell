@@ -103,8 +103,8 @@ export function AIAssistantPage() {
       <div className="iw-ai-messages" ref={scrollRef}>
         {messages.length === 0 && (
           <p className="iw-help-text">
-            I've read "{project.title}" — the manuscript, story bible, and timeline you've written so far. Ask me anything, or
-            pick a mode above for a focused pass.
+            I've read "{project.title}" — the manuscript, story bible, and timeline you've written so far. Ask me anything, or pick a mode above for a
+            focused pass.
           </p>
         )}
         {messages.map((m) => (
@@ -126,7 +126,14 @@ export function AIAssistantPage() {
             )}
             {m.role === "assistant" && (
               <div className="iw-ai-actions">
-                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(m.content); show("Copied to clipboard."); }}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    navigator.clipboard.writeText(m.content);
+                    show("Copied to clipboard.");
+                  }}
+                >
                   <Copy size={12} /> Copy
                 </Button>
               </div>

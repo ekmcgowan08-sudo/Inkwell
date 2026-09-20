@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, SectionList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  SectionList,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { darkTheme } from "@inkwell/design-tokens";
@@ -72,7 +83,9 @@ export default function StoryboardScreen() {
         .update({ title: nextTitle || "Untitled", summary: nextSummary, column: nextColumn || DEFAULT_COLUMN } as never)
         .eq("id", selected.id);
       setCards((prev) =>
-        prev.map((c) => (c.id === selected.id ? { ...c, title: nextTitle || "Untitled", summary: nextSummary, column: nextColumn || DEFAULT_COLUMN } : c)),
+        prev.map((c) =>
+          c.id === selected.id ? { ...c, title: nextTitle || "Untitled", summary: nextSummary, column: nextColumn || DEFAULT_COLUMN } : c,
+        ),
       );
       setSaveState("saved");
     }, AUTOSAVE_IDLE_MS);
@@ -86,7 +99,12 @@ export default function StoryboardScreen() {
     const reordered = [...columnCards];
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex]!, reordered[index]!];
     await Promise.all(
-      reordered.map((c, i) => getSupabase().from("storyboard_cards").update({ sort_order: i } as never).eq("id", c.id)),
+      reordered.map((c, i) =>
+        getSupabase()
+          .from("storyboard_cards")
+          .update({ sort_order: i } as never)
+          .eq("id", c.id),
+      ),
     );
     await load();
   }
@@ -190,7 +208,16 @@ export default function StoryboardScreen() {
       <SectionList
         sections={sections}
         keyExtractor={(c) => c.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={darkTheme.accent} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={darkTheme.accent}
+          />
+        }
         contentContainerStyle={{ padding: 16, gap: 10 }}
         renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
         ListEmptyComponent={
@@ -246,8 +273,23 @@ const styles = StyleSheet.create({
   navRow: { flexDirection: "row", gap: 16, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   navLink: { color: darkTheme.textSecondary, fontSize: 13, fontWeight: "600" },
   navLinkActive: { color: darkTheme.accent },
-  sectionHeader: { color: darkTheme.accent, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginTop: 12, marginBottom: 6 },
-  card: { flexDirection: "row", backgroundColor: darkTheme.bgElevated, borderRadius: 12, borderWidth: 1, borderColor: darkTheme.border, overflow: "hidden" },
+  sectionHeader: {
+    color: darkTheme.accent,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  card: {
+    flexDirection: "row",
+    backgroundColor: darkTheme.bgElevated,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: darkTheme.border,
+    overflow: "hidden",
+  },
   cardMain: { flex: 1, padding: 16 },
   cardTitle: { color: darkTheme.textPrimary, fontSize: 16, fontWeight: "600" },
   cardSummary: { color: darkTheme.textSecondary, fontSize: 13, marginTop: 4 },

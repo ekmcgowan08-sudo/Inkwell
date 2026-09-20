@@ -81,8 +81,8 @@ export function SyncConflictsDialog({ open, onClose }: { open: boolean; onClose:
       ) : (
         <>
           <p className="iw-help-text" style={{ marginBottom: 14 }}>
-            {conflicts.length} {conflicts.length === 1 ? "item" : "items"} changed on two devices before they could sync.
-            Nothing was lost — both versions are shown below.
+            {conflicts.length} {conflicts.length === 1 ? "item" : "items"} changed on two devices before they could sync. Nothing was lost — both
+            versions are shown below.
           </p>
           {conflicts.map((c) => (
             <ConflictCard key={c.id} conflict={c} />

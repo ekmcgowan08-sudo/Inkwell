@@ -29,6 +29,9 @@ export async function acceptLegalTerms(userId: string): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
   const now = new Date().toISOString();
-  await supabase.from("profiles").update({ terms_accepted_at: now, privacy_accepted_at: now } as never).eq("id", userId);
+  await supabase
+    .from("profiles")
+    .update({ terms_accepted_at: now, privacy_accepted_at: now } as never)
+    .eq("id", userId);
   acceptanceCache.set(userId, true);
 }

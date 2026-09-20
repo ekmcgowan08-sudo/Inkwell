@@ -22,7 +22,11 @@ export function VersionsPage() {
   const effectiveSceneId = sceneId || scenes[0]?.id || "";
   const revisions = useLiveQuery(() => (effectiveSceneId ? listRevisions(effectiveSceneId) : []), [effectiveSceneId], EMPTY_ARRAY);
 
-  const snapshots = useLiveQuery(() => db.namedSnapshots.where("projectId").equals(project.id).reverse().sortBy("createdAt"), [project.id], EMPTY_ARRAY);
+  const snapshots = useLiveQuery(
+    () => db.namedSnapshots.where("projectId").equals(project.id).reverse().sortBy("createdAt"),
+    [project.id],
+    EMPTY_ARRAY,
+  );
   const recoveryItems = useLiveQuery(() => db.deletedItems.where("projectId").equals(project.id).toArray(), [project.id], EMPTY_ARRAY);
 
   async function createSnapshot() {
@@ -62,7 +66,14 @@ export function VersionsPage() {
           Scene revision history
         </h2>
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-          <SelectField label="Chapter" value={effectiveChapterId} onChange={(e) => { setChapterId(e.target.value); setSceneId(""); }}>
+          <SelectField
+            label="Chapter"
+            value={effectiveChapterId}
+            onChange={(e) => {
+              setChapterId(e.target.value);
+              setSceneId("");
+            }}
+          >
             {chapters.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title}
@@ -110,7 +121,12 @@ export function VersionsPage() {
           Named snapshots
         </h2>
         <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "flex-end" }}>
-          <TextField label="Snapshot name" value={snapshotName} onChange={(e) => setSnapshotName(e.target.value)} placeholder="e.g. Before Act 3 rewrite" />
+          <TextField
+            label="Snapshot name"
+            value={snapshotName}
+            onChange={(e) => setSnapshotName(e.target.value)}
+            placeholder="e.g. Before Act 3 rewrite"
+          />
           <Button onClick={createSnapshot}>
             <Save size={14} /> Create & download
           </Button>
@@ -144,7 +160,8 @@ export function VersionsPage() {
               <div key={item.id} className="iw-card" style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>
                   <Trash2 size={13} style={{ marginRight: 6 }} />
-                  {item.entityType} · deleted {new Date(item.deletedAt).toLocaleDateString()} · purges {new Date(item.purgeAfter).toLocaleDateString()}
+                  {item.entityType} · deleted {new Date(item.deletedAt).toLocaleDateString()} · purges{" "}
+                  {new Date(item.purgeAfter).toLocaleDateString()}
                 </span>
                 <Button size="sm" onClick={() => restoreDeletedItem(item.id)}>
                   Restore

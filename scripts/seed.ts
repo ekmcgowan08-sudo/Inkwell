@@ -92,10 +92,11 @@ async function main() {
 
     for (const [index, text] of [CH1_TEXT, CH2_TEXT].entries()) {
       const title = index === 0 ? "Chapter 1 — The Lighthouse" : "Chapter 2 — What the Fire Left";
-      const chapter = await client.query(
-        `insert into public.chapters (project_id, title, sort_order) values ($1, $2, $3) returning id`,
-        [projectId, title, index],
-      );
+      const chapter = await client.query(`insert into public.chapters (project_id, title, sort_order) values ($1, $2, $3) returning id`, [
+        projectId,
+        title,
+        index,
+      ]);
       const chapterId = chapter.rows[0].id as string;
       await client.query(
         `insert into public.scenes (project_id, chapter_id, title, content, plain_text, word_count)
@@ -145,10 +146,13 @@ async function main() {
       ["The logbook", "Day 1, evening", "Wren finds a last entry not in her brother's hand."],
     ];
     for (const [i, [label, whenLabel, detail]] of events.entries()) {
-      await client.query(
-        `insert into public.timeline_events (project_id, label, when_label, detail, sort_order) values ($1, $2, $3, $4, $5)`,
-        [projectId, label, whenLabel, detail, i],
-      );
+      await client.query(`insert into public.timeline_events (project_id, label, when_label, detail, sort_order) values ($1, $2, $3, $4, $5)`, [
+        projectId,
+        label,
+        whenLabel,
+        detail,
+        i,
+      ]);
     }
     console.log("Seeded 3 timeline events.");
 

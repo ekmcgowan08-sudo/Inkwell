@@ -9,17 +9,7 @@ import { detectChapters, extractTextFromDocx, type ImportPreview } from "../../l
 import type { Series } from "@inkwell/shared-types";
 import { useNavigate } from "react-router-dom";
 
-export function NewProjectDialog({
-  open,
-  onClose,
-  userId,
-  series,
-}: {
-  open: boolean;
-  onClose: () => void;
-  userId: string;
-  series: Series[];
-}) {
+export function NewProjectDialog({ open, onClose, userId, series }: { open: boolean; onClose: () => void; userId: string; series: Series[] }) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
@@ -137,8 +127,8 @@ export function ImportDialog({ open, onClose, userId }: { open: boolean; onClose
       {!preview && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <p className="iw-help-text">
-            Upload a .txt, .md, or .docx file. We'll detect chapter headings automatically (including Word's
-            "Heading" styles) and show you a preview before anything is created — nothing is imported silently.
+            Upload a .txt, .md, or .docx file. We'll detect chapter headings automatically (including Word's "Heading" styles) and show you a preview
+            before anything is created — nothing is imported silently.
           </p>
           <input
             ref={fileRef}

@@ -15,7 +15,11 @@ export async function runLocalConsistencyScan(projectId: string): Promise<AIFind
   const now = nowIso();
 
   // 1. Duplicate names within the same entry type.
-  const entries = await db.storyBibleEntries.where("projectId").equals(projectId).and((e) => !e.deletedAt).toArray();
+  const entries = await db.storyBibleEntries
+    .where("projectId")
+    .equals(projectId)
+    .and((e) => !e.deletedAt)
+    .toArray();
   const byTypeAndName = new Map<string, typeof entries>();
   for (const e of entries) {
     const key = `${e.entryType}:${e.name.trim().toLowerCase()}`;
@@ -37,8 +41,16 @@ export async function runLocalConsistencyScan(projectId: string): Promise<AIFind
   }
 
   // 2. Open story threads never linked to any scene or storyboard card.
-  const threads = await db.storyThreads.where("projectId").equals(projectId).and((t) => t.status === "open").toArray();
-  const scenes = await db.scenes.where("projectId").equals(projectId).and((s) => !s.deletedAt).toArray();
+  const threads = await db.storyThreads
+    .where("projectId")
+    .equals(projectId)
+    .and((t) => t.status === "open")
+    .toArray();
+  const scenes = await db.scenes
+    .where("projectId")
+    .equals(projectId)
+    .and((s) => !s.deletedAt)
+    .toArray();
   const cards = await db.storyboardCards.where("projectId").equals(projectId).toArray();
   for (const thread of threads) {
     const linked = scenes.some((s) => s.storyThreadId === thread.id) || cards.some((c) => c.storyThreadId === thread.id);

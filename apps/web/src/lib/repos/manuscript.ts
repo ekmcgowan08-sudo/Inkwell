@@ -14,7 +14,11 @@ export async function listChapters(projectId: string): Promise<Chapter[]> {
 // ---- Parts (optional grouping above chapters — see PRODUCT.md's manuscript hierarchy) ----
 
 export async function listParts(projectId: string): Promise<Part[]> {
-  return db.parts.where("projectId").equals(projectId).and((p) => !p.deletedAt).sortBy("sortOrder");
+  return db.parts
+    .where("projectId")
+    .equals(projectId)
+    .and((p) => !p.deletedAt)
+    .sortBy("sortOrder");
 }
 
 export async function createPart(projectId: string, title: string): Promise<Part> {
@@ -88,7 +92,11 @@ export async function listScenes(chapterId: string): Promise<Scene[]> {
 }
 
 export async function listAllScenes(projectId: string): Promise<Scene[]> {
-  return db.scenes.where("projectId").equals(projectId).and((s) => !s.deletedAt).toArray();
+  return db.scenes
+    .where("projectId")
+    .equals(projectId)
+    .and((s) => !s.deletedAt)
+    .toArray();
 }
 
 export async function createChapter(projectId: string, title: string): Promise<Chapter> {

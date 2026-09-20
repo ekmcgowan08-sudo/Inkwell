@@ -98,8 +98,8 @@ export function BookSettingsPage() {
       <div className="iw-card" style={{ padding: 20, borderColor: "var(--color-danger)" }}>
         <div style={{ fontWeight: 600, marginBottom: 12, color: "var(--color-danger)" }}>Danger zone</div>
         <p className="iw-help-text" style={{ marginBottom: 12 }}>
-          Deleting a book moves it to recovery for 30 days before permanent removal — export a backup first if you want to
-          keep a copy indefinitely (see the Exports tab).
+          Deleting a book moves it to recovery for 30 days before permanent removal — export a backup first if you want to keep a copy indefinitely
+          (see the Exports tab).
         </p>
         <Button variant="danger" onClick={() => setConfirmDelete(true)}>
           Delete this book
