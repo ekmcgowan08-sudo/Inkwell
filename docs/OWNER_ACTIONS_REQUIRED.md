@@ -22,8 +22,17 @@ items off as you complete them (this file is meant to be edited).
       <https://docs.claude.com/en/docs/about-claude/models> — don't assume the repo's default is still
       current) as a secret on the deployed `ai-assistant` Edge Function:
       `supabase secrets set ANTHROPIC_API_KEY=... ANTHROPIC_MODEL=...`.
-- [ ] Decide and set `AI_FREE_PLAN_MONTHLY_TOKEN_ALLOWANCE` / `AI_AUTHOR_PLAN_MONTHLY_TOKEN_ALLOWANCE` for your
-      actual cost tolerance — the defaults in `.env.example` are placeholders, not a recommendation.
+- [ ] Decide your actual free-tier monthly AI token allowance for cost tolerance. Every new signup gets an
+      `entitlements` row automatically (`handle_new_user_entitlement`, migration `0010_billing.sql`) with
+      `ai_monthly_token_allowance` defaulting to 200,000 **at the SQL level** — this is a Postgres trigger, so
+      it can't read the `ai-assistant` Edge Function's environment variables. To change what _new_ signups
+      get, edit that migration's `default 200000` before first deploying, or run
+      `alter table entitlements alter column ai_monthly_token_allowance set default <value>` against your
+      deployed project (takes effect for signups after that, not existing rows).
+      `AI_FREE_PLAN_MONTHLY_TOKEN_ALLOWANCE` (env var, `.env.example`) only covers the narrow fallback case of
+      a caller somehow having no `entitlements` row at all — set it too, but it is not the primary lever.
+      `AI_AUTHOR_PLAN_MONTHLY_TOKEN_ALLOWANCE` is a placeholder for a future billing integration (nothing
+      creates a paid-plan `entitlements` row yet — see `ROADMAP.md`) and currently has no effect.
 - [ ] Until this key is set, the AI Assistant silently falls back to a deterministic test provider (clearly
       logged) — nothing breaks, but no real AI happens. This is intentional, not a bug to "fix" without the key.
 

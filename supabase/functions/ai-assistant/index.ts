@@ -34,6 +34,26 @@ function currentPeriodMonth(): string {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/**
+ * The fallback monthly token allowance for a caller with no `entitlements` row. In practice every
+ * real signup gets one automatically (`handle_new_user_entitlement`, migration 0010) with its
+ * `ai_monthly_token_allowance` defaulting to 200,000 at the SQL level — a Postgres trigger can't
+ * read this Deno function's environment variables, so `AI_FREE_PLAN_MONTHLY_TOKEN_ALLOWANCE`
+ * cannot change what a *new* signup gets; to change that, edit the migration's `default 200000`
+ * (or `alter table entitlements alter column ai_monthly_token_allowance set default ...` against a
+ * deployed project) and it takes effect for signups after that change. This function only covers
+ * the edge case of no row existing at all (a caller from before that migration was ever applied,
+ * or a local/test environment missing it) — previously hardcoded to a bare `200_000` literal with
+ * no way to override it even for that narrow case; found while auditing `.env.example` against
+ * what the code actually reads, since `docs/OWNER_ACTIONS_REQUIRED.md` overstated what setting
+ * this env var actually reaches.
+ */
+function defaultMonthlyAllowance(): number {
+  const raw = Deno.env.get("AI_FREE_PLAN_MONTHLY_TOKEN_ALLOWANCE");
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 200_000;
+}
+
 function selectProvider(): LLMProvider {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) {
@@ -101,7 +121,7 @@ async function handleRequest(req: Request): Promise<Response> {
         .eq("period_month", periodMonth)
         .maybeSingle(),
     ]);
-    const allowance = entitlement?.ai_monthly_token_allowance ?? 200_000;
+    const allowance = entitlement?.ai_monthly_token_allowance ?? defaultMonthlyAllowance();
     const usedTokens = (usage?.tokens_input ?? 0) + (usage?.tokens_output ?? 0);
     if (usedTokens >= allowance) {
       throw new AssistantError("usage_allowance_exceeded", `Monthly AI allowance (${allowance.toLocaleString()} tokens) reached.`);
@@ -246,4 +266,4 @@ if (import.meta.main) {
 }
 
 // Re-exported so ai-assistant/index.test.ts can exercise this logic directly.
-export { currentPeriodMonth, handleRequest, selectProvider };
+export { currentPeriodMonth, defaultMonthlyAllowance, handleRequest, selectProvider };
