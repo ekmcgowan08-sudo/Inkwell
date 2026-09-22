@@ -4,6 +4,32 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-22 — Locked in the live-word-count fix with a real regression test, not a component test
+
+The manuscript editor's live-word-count staleness bug (fixed 2026-09-19, see below) had no permanent regression
+guard — the pre-existing smoke-test assertion couldn't catch it because Playwright's default `toContainText`
+auto-retry window is longer than the 1.5s autosave debounce, letting autosave finish and mask the lag. That's
+exactly how the bug shipped unnoticed in the first place.
+
+First tried a component-level test (`@testing-library/react` + Tiptap/ProseMirror directly in jsdom): a basic
+render spike worked, but driving real keystrokes through ProseMirror's contenteditable view in jsdom is a known
+fragile path (it depends on `Range`/`Selection`/`getClientRects` support jsdom only partially provides), and
+`ManuscriptPage.tsx` doesn't expose its internal editor instance or context providers for easy test construction
+(`ProjectContext`/`AuthContext` aren't exported). Rather than force that — or export internals purely to make a
+risky test possible — used the technique that actually found the bug originally: a Playwright assertion with a
+short, deliberate timeout (`tests/e2e/wordCountLive.spec.ts`, 400ms, well under the 1500ms `AUTOSAVE_IDLE_MS`
+debounce).
+
+Verified this is a real regression guard, not just a plausible-looking one: checked out `ManuscriptPage.tsx`
+from the commit before the fix (`2a86e0d`, parent of `fe0184f`) into the working tree, ran the new test against
+it, and confirmed it fails exactly as expected (`"0 words this scene · Saving…"` instead of `"7 words"`), then
+restored the fixed file (verified zero diff after restoring) and confirmed the test passes again. Added to CI's
+existing Playwright step (already runs the whole `tests/e2e/` directory, no CI change needed beyond the step's
+descriptive name) and `docs/TESTING.md`.
+
+Verified: Browser — full 4-spec Playwright suite (smoke, performance, accessibility, new live-word-count test)
+passing; new test independently confirmed to fail against the pre-fix code and pass against the current code.
+
 ### 2026-09-19 — `AI_FREE_PLAN_MONTHLY_TOKEN_ALLOWANCE` didn't reach what it claimed to control; corrected the docs and gave it the one real effect it can have
 
 Auditing `.env.example` against what the code actually reads (the same audit style as the `pnpm lint`/format-check fixes) turned up `docs/OWNER_ACTIONS_REQUIRED.md` telling the owner to "decide and set `AI_FREE_PLAN_MONTHLY_TOKEN_ALLOWANCE` ... for your actual cost tolerance," while `ai-assistant/index.ts`'s allowance check hardcoded `?? 200_000` directly, never reading the env var at all.
