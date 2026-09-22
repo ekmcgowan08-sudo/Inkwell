@@ -4,6 +4,22 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-22 — `docs/EDITOR_AND_AUTOSAVE.md`'s "What's not built yet" section was two features stale
+
+Both items it listed had actually shipped: chapter drag-and-drop reordering landed in commit `20e3e01` (and
+`docs/IMPLEMENTATION_STATUS.md` already correctly marks it done), and the conflict-resolution UI it said
+"nothing in the UI yet surfaces" is a real, working `SyncConflictsDialog` component — field-level diff between
+"this device" and "the other device" with Keep-mine/Keep-theirs buttons, wired into `ProjectLayout` and
+correctly described as existing in `docs/SYNC_AND_CONFLICTS.md` and `docs/ARCHITECTURE.md`. Only this one doc's
+stale note was never updated when the features shipped. Replaced the false "not built" claim with a short,
+accurate description of the conflict-resolution flow (mirroring how the doc already documents autosave), and
+removed the section entirely rather than leave a decoy "nothing to report here" bullet — pointed to
+`docs/IMPLEMENTATION_STATUS.md` as the one doc actually meant to be kept current on what's missing, everywhere.
+
+Verified: Auto — read-only doc correction, no code change; cross-checked against `ManuscriptPage.tsx` (dnd-kit
+imports/`onChapterDragEnd`/`reorderChapters` calls) and `SyncConflictsDialog.tsx` directly rather than trusting
+another doc's claim.
+
 ### 2026-09-22 — Locked in the live-word-count fix with a real regression test, not a component test
 
 The manuscript editor's live-word-count staleness bug (fixed 2026-09-19, see below) had no permanent regression

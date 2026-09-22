@@ -70,10 +70,15 @@ actual numbers and what this measurement does and doesn't cover.
 A pure UI state toggle (`ManuscriptPage`'s `focusMode`) that hides the chapter sidebar, app sidebar, and
 toolbars via a CSS class (`.iw-ms-focus`, `apps/web/src/styles/manuscript.css`) — no data-layer implications.
 
+## Conflict resolution
+
+A losing concurrent write from a second device is never silently dropped: the optimistic-concurrency
+mechanism (`revision` column) detects it, records it in the local `syncConflicts` Dexie table, and
+`SyncConflictsDialog` (`apps/web/src/components/sync/SyncConflictsDialog.tsx`) surfaces a field-level diff
+between "this device" and "the other device" so the author picks which version to keep. See
+`docs/SYNC_AND_CONFLICTS.md` for the full detection/recording flow and its verification level.
+
 ## What's not built yet
 
-- **Chapter drag-and-drop reordering** in the manuscript sidebar specifically (storyboard has this in full;
-  the manuscript chapter list does not — a real, stated gap).
-- **Conflict-resolution UI** for a losing concurrent write from a second device — the underlying
-  optimistic-concurrency mechanism (`revision` column) exists and is used server-side, but nothing in the UI
-  yet surfaces "someone else changed this, pick a version" to the author. See `docs/SYNC_AND_CONFLICTS.md`.
+Nothing specific to the editor/autosave path is currently a known gap — see `docs/IMPLEMENTATION_STATUS.md`
+for the authoritative, actively-maintained list across the whole product.
