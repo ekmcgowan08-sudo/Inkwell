@@ -1,7 +1,7 @@
 import type { Citation } from "@inkwell/shared-types";
 import type { ContextBundle, AssistantResponse } from "./contracts.ts";
 
-const CITATION_PATTERN = /\[(scene|chapter|story_bible_entry|timeline_event|canon_fact):([\w-]+)\]/g;
+const CITATION_PATTERN = /\[(scene|chapter|story_bible_entry|timeline_event|canon_fact|story_thread):([\w-]+)\]/g;
 
 /**
  * Extracts structured citations from a model's plain-text response by
@@ -25,6 +25,7 @@ export function parseCitations(text: string, ctx: ContextBundle): Citation[] {
       ctx.storyBibleDigest.find((e) => e.id === id)?.name ??
       ctx.recentTimelineEvents.find((e) => e.id === id)?.label ??
       ctx.approvedCanonFacts.find((f) => f.id === id)?.statement ??
+      ctx.openThreads.find((t) => t.id === id)?.title ??
       "Referenced item";
     citations.push({ kind: kind as Citation["kind"], id: id!, label });
   }

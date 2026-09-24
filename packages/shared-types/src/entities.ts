@@ -427,7 +427,7 @@ export const aiConversationSchema = z.object({
 export type AIConversation = z.infer<typeof aiConversationSchema>;
 
 export const citationSchema = z.object({
-  kind: z.enum(["scene", "chapter", "story_bible_entry", "timeline_event", "canon_fact"]),
+  kind: z.enum(["scene", "chapter", "story_bible_entry", "timeline_event", "canon_fact", "story_thread"]),
   id: uuidSchema,
   label: z.string(),
   excerpt: z.string().optional(),

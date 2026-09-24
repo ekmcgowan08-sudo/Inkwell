@@ -4,6 +4,37 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-24 — Real bug: citing an open story thread silently produced no citation at all
+
+`packages/ai-contracts/src/citations.ts` (`parseCitations`, `inferGroundedness`, `summarizeContext`) had zero
+test coverage — not even indirectly, since `aiClient.test.ts` only exercises findings extraction. Writing
+tests for it surfaced a genuine cross-file inconsistency: `promptBuilder.ts`'s `buildSystemPrompt` explicitly
+instructs the model, in its "OPEN STORY THREADS" section, to cite threads as `[story_thread:id]` — but
+`citations.ts`'s `CITATION_PATTERN` regex and `citationSchema`'s `kind` enum (`packages/shared-types`) only
+ever recognized `scene | chapter | story_bible_entry | timeline_event | canon_fact`. Any citation in exactly
+the format the prompt itself tells the model to use silently vanished — `parseCitations` just never matched
+it, so it never became a clickable citation in the AI Assistant UI. This was invisible to every existing
+test: the deterministic test provider never emits citation-style bracket text at all, so nothing in the
+committed suite (or the real conversations this sandbox can't run — no live Anthropic key) ever exercised
+this exact path.
+
+Fixed by adding `"story_thread"` as a first-class citation kind everywhere it needs to exist: the
+`citationSchema` enum, the `CITATION_PATTERN` regex, and a new resolution branch in `parseCitations` reading
+from `ctx.openThreads` (a bucket that already existed in `ContextBundle` for exactly this purpose — the label
+data was already there, just never wired to citation resolution). No UI change needed:
+`AIAssistantPage.tsx` renders citation kind generically (`c.kind.replace(/_/g, " ")`). No DB migration needed
+either: `ai_messages.citations` and `ai_findings.evidence` are plain `jsonb` columns with no `kind` enum
+constraint at the SQL level.
+
+Verified the fix is real: wrote the story-thread citation test, confirmed it fails against the pre-fix
+regex/schema (temporarily reverted both, watched `parseCitations` return `[]` for a `[story_thread:...]`
+citation the context could resolve), then restored the fix (byte-identical restore) and confirmed all 12
+tests pass.
+
+Verified: Auto — `pnpm --filter @inkwell/ai-contracts test` 2 files/17 tests passing (new); full monorepo
+typecheck and lint clean; Deno Edge Function typecheck + 18/18 tests still passing (this type is shared with
+`ai-assistant/index.ts`); full 4-spec Playwright suite still passing.
+
 ### 2026-09-24 — Small cleanup: dead passthrough wrapper in `sampleProject.ts`, plus its first-ever test
 
 `createSampleProject`'s local `createChapterAndReturn` helper called `createChapter` with the same two
