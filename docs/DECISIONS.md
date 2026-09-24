@@ -4,6 +4,23 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-24 — The real Anthropic provider (the actual paid-API call path) had zero tests
+
+`anthropicProvider.ts` is the only place in this codebase that calls the real Anthropic API — request
+building, response parsing, and error handling all live there, and none of it had ever been exercised, only
+read. Added `anthropicProvider.test.ts` using `vi.stubGlobal("fetch", ...)` rather than a real network call:
+verifies the request shape (URL, headers including `x-api-key`/`anthropic-version`, model/system/user/
+max_tokens body), the model-id fallback (blank/whitespace `config.model` falls back to
+`DEFAULT_ANTHROPIC_MODEL`, a real value is used as-is), response parsing (multiple text content blocks are
+joined with a newline, non-text blocks like `tool_use` are ignored, an empty-content response becomes "No
+response." rather than an empty string), usage token extraction (real counts pass through, missing fields
+default to 0 rather than `undefined`/`NaN`), and that a non-ok HTTP response throws an error whose message
+includes both the status and the (truncated) response body rather than swallowing the failure.
+
+Verified: Auto — all 7 tests passed on the first run (no bug found here); `pnpm --filter @inkwell/ai-contracts
+test` 5 files/37 tests passing; full monorepo typecheck and lint clean; Deno typecheck of `ai-assistant/index.ts`
+(which imports this provider) still passing.
+
 ### 2026-09-24 — `promptBuilder.ts` (the file behind the story-thread citation bug) also had zero tests
 
 Added `promptBuilder.test.ts` for `buildSystemPrompt`: each context section header appears only when its
