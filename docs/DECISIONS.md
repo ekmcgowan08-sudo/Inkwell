@@ -4,6 +4,23 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-24 — Small cleanup: dead passthrough wrapper in `sampleProject.ts`, plus its first-ever test
+
+`createSampleProject`'s local `createChapterAndReturn` helper called `createChapter` with the same two
+arguments and returned the result unchanged — a pure passthrough adding nothing. Inlined the two call sites to
+call `createChapter` directly and deleted the wrapper. Behavior-preserving; verified with a diff review (no
+logic changed, just the indirection removed).
+
+While touching it, noticed this onboarding path (the sample "The Lighthouse Keeps" project every non-local-only
+new signup can generate) had zero test coverage despite seeding real, structured data across four tables.
+Added `sampleProject.test.ts` — asserts two chapters each with one non-empty-word-count scene (the real prose
+actually landed, not the empty placeholder `createChapter` seeds by default), the two expected story-bible
+characters by name, and three timeline events. This is a genuine regression guard for the refactor above, not
+padding: it exercises the exact code path just changed.
+
+Verified: Auto — `pnpm --filter @inkwell/web test` 18 files/68 tests passing (was 17/67); full monorepo
+typecheck, lint, and production build clean.
+
 ### 2026-09-24 — Real bug: "Run consistency scan" duplicated findings on every re-run, and un-dismissed dismissed ones
 
 `findingsScanner.ts`'s `runLocalConsistencyScan` had zero test coverage (found via the same "completely

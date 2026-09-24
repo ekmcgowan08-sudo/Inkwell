@@ -52,10 +52,11 @@ export async function createSampleProject(userId: string): Promise<Project> {
     await db.chapters.delete(defaultChapter.id);
   }
 
-  const scenesCh1 = await listScenes((await createChapterAndReturn(project.id, "Chapter 1 — The Lighthouse")).id);
+  const ch1 = await createChapter(project.id, "Chapter 1 — The Lighthouse");
+  const scenesCh1 = await listScenes(ch1.id);
   await autosaveScene(scenesCh1[0]!.id, docFromParagraphs(CH1_TEXT));
 
-  const ch2 = await createChapterAndReturn(project.id, "Chapter 2 — What the Fire Left");
+  const ch2 = await createChapter(project.id, "Chapter 2 — What the Fire Left");
   const scenesCh2 = await listScenes(ch2.id);
   await autosaveScene(scenesCh2[0]!.id, docFromParagraphs(CH2_TEXT));
 
@@ -97,8 +98,4 @@ export async function createSampleProject(userId: string): Promise<Project> {
   await updateTimelineEvent(t3.id, { whenLabel: "Day 1, evening", detail: "Wren finds a last entry not in her brother's hand." });
 
   return project;
-
-  async function createChapterAndReturn(projectId: string, title: string) {
-    return createChapter(projectId, title);
-  }
 }
