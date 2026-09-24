@@ -4,6 +4,30 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-24 — Real bug: "Run consistency scan" duplicated findings on every re-run, and un-dismissed dismissed ones
+
+`findingsScanner.ts`'s `runLocalConsistencyScan` had zero test coverage (found via the same "completely
+untested file" sweep that caught `findReplace.ts`). Writing tests for it surfaced a genuine bug, not just a
+gap: every finding was written with `id: crypto.randomUUID()` and no check for whether the same underlying
+issue had already been flagged. The Findings page's "Run consistency scan" button is explicitly meant to be
+re-run by the author (e.g., after every writing session) — clicking it twice with an unresolved duplicate-name
+issue still present created a second identical finding, a third click a third, forever. Worse: even a finding
+the author had explicitly **dismissed** (or accepted/snoozed/marked intentional) came back as a fresh "open"
+finding on the next scan, silently undoing their triage decision — directly against the page's own stated
+promise ("You're always the final authority — accept, dismiss, snooze, or mark anything intentional").
+
+Fixed by giving each finding a content-derived signature (`findingType` + the sorted set of its evidence
+entity ids — the actual real-world facts involved, not the title/explanation text, which can vary) and
+skipping creation of any signature that already exists among the project's findings, regardless of status.
+Verified the fix is real and the test suite actually exercises the failure mode: wrote the dedup tests first
+against the unfixed code and watched them fail exactly as expected (a second identical finding row, and a
+dismissed finding coming back as `status: "open"`), then applied the fix and confirmed all 5 tests
+(2 detection-correctness + 3 dedup) pass.
+
+Verified: Auto — `pnpm --filter @inkwell/web test` 17 files/67 tests passing (was 16/62); full monorepo
+typecheck and lint clean; full 4-spec Playwright suite (smoke, performance, accessibility,
+live-word-count) still passing, confirming the Findings page flow the smoke test exercises still works.
+
 ### 2026-09-22 — Find-and-replace (`findReplace.ts`) had zero test coverage; a headless Tiptap `Editor` makes it cheap to test
 
 `apps/web/src/features/manuscript/` had no test file at all despite containing real, non-trivial logic:

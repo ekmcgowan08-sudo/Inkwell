@@ -10,9 +10,26 @@ import type { AIFinding } from "@inkwell/shared-types";
  * consistency-check AI mode, which reasons about prose the way these rules
  * cannot. See docs/AI_ARCHITECTURE.md.
  */
+/** Stable identity for "is this the same underlying issue as one we've already flagged" — the
+ * finding type plus the sorted set of evidence ids, so a re-scan doesn't care if a title or
+ * explanation string changed, only whether the same real-world facts are still involved. */
+function findingSignature(findingType: AIFinding["findingType"], evidence: AIFinding["evidence"]): string {
+  return `${findingType}:${evidence
+    .map((e) => e.id)
+    .sort()
+    .join(",")}`;
+}
+
 export async function runLocalConsistencyScan(projectId: string): Promise<AIFinding[]> {
   const created: AIFinding[] = [];
   const now = nowIso();
+
+  // Scans are re-run by the author on demand (the Findings page's "Run consistency scan"
+  // button) — never re-flag an issue that's already been surfaced, regardless of whether the
+  // author has since triaged it (accepted/dismissed/snoozed/marked intentional) or left it open.
+  // Re-creating a dismissed finding on every scan would make dismissal meaningless.
+  const existing = await db.aiFindings.where("projectId").equals(projectId).toArray();
+  const existingSignatures = new Set(existing.map((f) => findingSignature(f.findingType, f.evidence)));
 
   // 1. Duplicate names within the same entry type.
   const entries = await db.storyBibleEntries
@@ -27,16 +44,15 @@ export async function runLocalConsistencyScan(projectId: string): Promise<AIFind
   }
   for (const [, group] of byTypeAndName) {
     if (group.length > 1) {
-      created.push(
-        await putFinding(projectId, {
-          findingType: "repeated_information",
-          severity: "low",
-          confidence: 0.9,
-          title: `Duplicate name: "${group[0]!.name}"`,
-          explanation: `${group.length} ${group[0]!.entryType} entries share the name "${group[0]!.name}". If these are meant to be the same entry, consider merging them.`,
-          evidence: group.map((g) => ({ kind: "story_bible_entry" as const, id: g.id, label: g.name })),
-        }),
-      );
+      const finding = await putFinding(projectId, {
+        findingType: "repeated_information",
+        severity: "low",
+        confidence: 0.9,
+        title: `Duplicate name: "${group[0]!.name}"`,
+        explanation: `${group.length} ${group[0]!.entryType} entries share the name "${group[0]!.name}". If these are meant to be the same entry, consider merging them.`,
+        evidence: group.map((g) => ({ kind: "story_bible_entry" as const, id: g.id, label: g.name })),
+      });
+      if (finding) created.push(finding);
     }
   }
 
@@ -55,16 +71,15 @@ export async function runLocalConsistencyScan(projectId: string): Promise<AIFind
   for (const thread of threads) {
     const linked = scenes.some((s) => s.storyThreadId === thread.id) || cards.some((c) => c.storyThreadId === thread.id);
     if (!linked) {
-      created.push(
-        await putFinding(projectId, {
-          findingType: "dropped_thread",
-          severity: "medium",
-          confidence: 0.6,
-          title: `Thread "${thread.title}" isn't linked to any scene`,
-          explanation: `"${thread.title}" is marked open but no scene or storyboard card references it. It may be dropped, or just not linked yet.`,
-          evidence: [{ kind: "canon_fact" as const, id: thread.id, label: thread.title }],
-        }),
-      );
+      const finding = await putFinding(projectId, {
+        findingType: "dropped_thread",
+        severity: "medium",
+        confidence: 0.6,
+        title: `Thread "${thread.title}" isn't linked to any scene`,
+        explanation: `"${thread.title}" is marked open but no scene or storyboard card references it. It may be dropped, or just not linked yet.`,
+        evidence: [{ kind: "canon_fact" as const, id: thread.id, label: thread.title }],
+      });
+      if (finding) created.push(finding);
     }
   }
 
@@ -77,16 +92,15 @@ export async function runLocalConsistencyScan(projectId: string): Promise<AIFind
     if (reported.has(pairKey)) continue;
     reported.add(pairKey);
     const event = events.find((e) => e.id === id)!;
-    created.push(
-      await putFinding(projectId, {
-        findingType: "timeline_conflict",
-        severity: "high",
-        confidence: 0.7,
-        title: `Possible timeline conflict around "${event.label}"`,
-        explanation: `A shared character appears in two events on the same date at different locations.`,
-        evidence: [id, ...others].map((eid) => ({ kind: "timeline_event" as const, id: eid, label: events.find((e) => e.id === eid)?.label ?? eid })),
-      }),
-    );
+    const finding = await putFinding(projectId, {
+      findingType: "timeline_conflict",
+      severity: "high",
+      confidence: 0.7,
+      title: `Possible timeline conflict around "${event.label}"`,
+      explanation: `A shared character appears in two events on the same date at different locations.`,
+      evidence: [id, ...others].map((eid) => ({ kind: "timeline_event" as const, id: eid, label: events.find((e) => e.id === eid)?.label ?? eid })),
+    });
+    if (finding) created.push(finding);
   }
 
   return created;
@@ -94,7 +108,11 @@ export async function runLocalConsistencyScan(projectId: string): Promise<AIFind
   async function putFinding(
     projectId: string,
     partial: Pick<AIFinding, "findingType" | "severity" | "confidence" | "title" | "explanation" | "evidence">,
-  ): Promise<AIFinding> {
+  ): Promise<AIFinding | null> {
+    const signature = findingSignature(partial.findingType, partial.evidence);
+    if (existingSignatures.has(signature)) return null;
+    existingSignatures.add(signature);
+
     const finding: AIFinding = {
       id: crypto.randomUUID(),
       projectId,
