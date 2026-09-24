@@ -4,6 +4,33 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-22 — Find-and-replace (`findReplace.ts`) had zero test coverage; a headless Tiptap `Editor` makes it cheap to test
+
+`apps/web/src/features/manuscript/` had no test file at all despite containing real, non-trivial logic:
+`findReplace.ts`'s `replaceAll` walks matches back-to-front specifically so earlier positions stay valid as
+later ones are replaced — a real correctness property with a real failure mode if it regressed (silently
+replacing the wrong text or crashing).
+
+Component-testing this next to `ManuscriptPage.tsx` looked hard (same jsdom/ProseMirror-view fragility noted
+in the word-count-regression-test entry below), but `findReplace.ts`'s functions only need an `Editor`
+instance, not a mounted React tree — and `@tiptap/react` exports the real, runtime `Editor` class, which
+constructs and runs commands headlessly (no DOM element to attach to) with no jsdom-specific polyfills
+required. Spiked this first (`new Editor({ extensions: [StarterKit], content })`, called `.commands`, read
+`.getText()`) before committing to it, confirmed it works cleanly, and added `findReplace.test.ts` — 8 tests
+covering case-insensitive matching across multiple text nodes, empty-query and no-match no-ops, and a test that
+specifically pins the back-to-front replacement order.
+
+Verified the back-to-front test is a real regression guard, not a plausible-looking one: flipped the loop to
+front-to-back and re-ran — two tests failed, one of them with `replaceAll` actually throwing a ProseMirror
+`RangeError` (a later match's position had shifted out of range after an earlier, shorter replacement), then
+restored the original file (zero diff) and confirmed all 8 pass again. This headless-`Editor` technique is
+worth reusing for any future pure-logic-on-a-`Editor`-instance testing in this codebase — it sidesteps the
+real ProseMirror-in-jsdom fragility entirely by never needing a mounted view.
+
+Verified: Auto — `pnpm --filter @inkwell/web test` 16 files/62 tests passing (was 15/54); full monorepo
+typecheck and lint clean; the new tests independently confirmed to fail against a deliberately-broken
+implementation and pass against the real one.
+
 ### 2026-09-22 — `docs/EDITOR_AND_AUTOSAVE.md`'s "What's not built yet" section was two features stale
 
 Both items it listed had actually shipped: chapter drag-and-drop reordering landed in commit `20e3e01` (and
