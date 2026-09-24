@@ -4,6 +4,19 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-24 — `caseConvert.ts` (used by every Supabase read/write on web and mobile) had zero tests
+
+`toCamelRow`/`toSnakeRow` are the shared conversion between Postgres's snake_case columns and this codebase's
+camelCase domain models — genuinely load-bearing, foundational, and used pervasively (every mobile screen,
+the edge functions' `toCamelRow` calls), yet had never been directly tested. Added `caseConvert.test.ts`:
+basic conversion in both directions, multi-word/multi-underscore keys, value-type/null preservation, and a
+round-trip test across a representative set of real column-style keys pulled from the schema
+(`estimatedCostUsdMicros`, `aiMonthlyTokenAllowance`, etc.) confirming `toCamelRow(toSnakeRow(x)) === x`.
+
+Verified: Auto — all 8 tests passed on the first run (no bug found, the implementation is correct for every
+real key shape this schema actually uses); `pnpm --filter @inkwell/shared-types test` 2 files/17 tests
+passing; full monorepo typecheck and lint clean.
+
 ### 2026-09-24 — The real Anthropic provider (the actual paid-API call path) had zero tests
 
 `anthropicProvider.ts` is the only place in this codebase that calls the real Anthropic API — request
