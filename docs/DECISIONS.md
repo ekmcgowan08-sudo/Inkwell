@@ -4,6 +4,20 @@ Running log of material decisions made autonomously, per the minimum-touch proto
 
 ---
 
+### 2026-09-24 — `promptBuilder.ts` (the file behind the story-thread citation bug) also had zero tests
+
+Added `promptBuilder.test.ts` for `buildSystemPrompt`: each context section header appears only when its
+bucket is non-empty, the "no manuscript/story-bible content yet" note appears only when chapters, story bible,
+and retrieved excerpts are all empty (not fooled by open threads or canon facts alone being present), the
+findings-block instructions are gated correctly by `FINDINGS_ELIGIBLE_MODES`, and the mode-specific task
+instruction is used. One test explicitly asserts the `[story_thread:id]` bracket format the OPEN STORY
+THREADS section emits — the same string whose corresponding regex was just fixed in `citations.ts` — so a
+future edit to either file that breaks their agreement fails a test instead of silently repeating the bug
+above.
+
+Verified: Auto — all 8 new tests passed on the first run (no bug found here, unlike `citations.ts`);
+`pnpm --filter @inkwell/ai-contracts test` 3 files/25 tests passing; full monorepo typecheck and lint clean.
+
 ### 2026-09-24 — Real bug: citing an open story thread silently produced no citation at all
 
 `packages/ai-contracts/src/citations.ts` (`parseCitations`, `inferGroundedness`, `summarizeContext`) had zero
